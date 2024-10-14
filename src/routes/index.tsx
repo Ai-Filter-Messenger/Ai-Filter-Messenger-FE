@@ -9,6 +9,7 @@ const LoadingScreen = () => <div>Loading...</div>;
 const ChatPage = lazy(() => import("../pages/chat/ChatPage"));
 const ContactsPage = lazy(() => import("../pages/contacts/ContactsPage"));
 const SearchPage = lazy(() => import("../pages/search/SearchPage"));
+const SettingsPage = lazy(() => import("../pages/settings/SettingsPage"));
 
 // Loadable 함수에 ComponentType을 사용하여 명시적으로 타입 지정
 const Loadable = (Component: ComponentType<any>) => (props: any) => (
@@ -41,6 +42,14 @@ export default function Router() {
         <DashboardLayout
           leftComponent={<SearchPage />} // SearchPage. Center, Right 병합
           isCustom={true} // MainLayout 커스텀 레이아웃 사용
+        />
+      ),
+    },
+    {
+      path: "/settings",
+      element: (
+        <DashboardLayout
+          leftComponent={<SettingsPage />} // SettingsPage.
         />
       ),
     },
