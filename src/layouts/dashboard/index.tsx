@@ -1,5 +1,3 @@
-//layouts/dashboard/index.tsx
-
 import { Box, Stack, IconButton } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useState } from "react";

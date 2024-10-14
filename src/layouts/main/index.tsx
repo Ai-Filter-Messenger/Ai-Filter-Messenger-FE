@@ -3,8 +3,8 @@ import { Box, useTheme } from "@mui/material";
 
 interface MainLayoutProps {
   leftComponent?: JSX.Element;
-  centerComponent?: JSX.Element;
-  rightComponent?: JSX.Element;
+  centerComponent?: JSX.Element | undefined;
+  rightComponent?: JSX.Element | undefined;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({
