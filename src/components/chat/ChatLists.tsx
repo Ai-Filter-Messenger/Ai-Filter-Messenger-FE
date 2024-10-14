@@ -1,4 +1,3 @@
-// components/chat/ChatLists.tsx
 import React from "react";
 
 const ChatLists = () => {
