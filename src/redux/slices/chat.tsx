@@ -1,7 +1,14 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import axios from "@/utils/axios";
-import { toast } from "react-toastify";
 import { AppDispatch, RootState } from "@/redux/store";
+import { toast } from "react-toastify";
+import {
+  connectWebSocket,
+  disconnectWebSocket,
+  sendMessage as sendMessageSocket,
+  subscribeToChatRoom,
+  unsubscribeFromChatRoom,
+  notifyTyping,
+} from "@/websocket/socketConnection";
 
 // 채팅 상태 정의
 export interface Message {
@@ -50,7 +57,7 @@ const slice = createSlice({
     setCurrentConversation(state, action: PayloadAction<Conversation | null>) {
       state.currentConversation = action.payload;
     },
-    sendMessageSuccess(state, action: PayloadAction<Message>) {
+    addMessageSuccess(state, action: PayloadAction<Message>) {
       const conversation = state.currentConversation;
       if (conversation) {
         conversation.messages.push(action.payload);
@@ -62,141 +69,125 @@ const slice = createSlice({
     updateTyping(state, action: PayloadAction<Record<string, any>>) {
       state.typing = action.payload;
     },
+    removeMessageSuccess(
+      state,
+      action: PayloadAction<{ messageId: string; chatRoomId: string }>
+    ) {
+      const conversation = state.conversations.find(
+        (conv) => conv.id === action.payload.chatRoomId
+      );
+      if (conversation) {
+        conversation.messages = conversation.messages.filter(
+          (msg) => msg.id !== action.payload.messageId
+        );
+      }
+    },
+    updateChatRoomName(
+      state,
+      action: PayloadAction<{ chatRoomId: string; newName: string }>
+    ) {
+      const conversation = state.conversations.find(
+        (conv) => conv.id === action.payload.chatRoomId
+      );
+      if (conversation) {
+        conversation.participants = conversation.participants.map(
+          (participant) =>
+            participant === conversation.id
+              ? action.payload.newName
+              : participant
+        );
+      }
+    },
   },
 });
 
 export default slice.reducer;
 
-const {
+export const {
   setError,
   setLoading,
   fetchConversationsSuccess,
   setCurrentConversation,
-  sendMessageSuccess,
+  addMessageSuccess,
   addNewConversation,
   updateTyping,
+  removeMessageSuccess,
+  updateChatRoomName,
 } = slice.actions;
 
-// 채팅방 목록 조회
-export function fetchConversations() {
-  return async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
+// WebSocket 연결 시작
+export const connectToChat = (token: string) => (dispatch: AppDispatch) => {
+  dispatch(setLoading(true));
+  try {
+    connectWebSocket(token); // WebSocket 연결 시작
+    toast.success("WebSocket 연결 성공");
+  } catch (error) {
+    dispatch(setError("WebSocket 연결에 실패했습니다."));
+    toast.error("WebSocket 연결에 실패했습니다.");
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+// WebSocket 연결 해제
+export const disconnectFromChat = () => (dispatch: AppDispatch) => {
+  disconnectWebSocket(); // WebSocket 연결 해제
+  toast.success("WebSocket 연결 해제됨");
+};
+
+// 특정 채팅방 구독
+export const subscribeToRoom =
+  (chatRoomId: string) => (dispatch: AppDispatch) => {
     try {
-      const response = await axios.get("/chat/list");
-      dispatch(fetchConversationsSuccess(response.data));
-    } catch (error: any) {
-      dispatch(
-        setError(error.message || "채팅방 목록을 가져오는 데 실패했습니다.")
-      );
-      toast.error(error.message || "채팅방 목록을 가져오는 데 실패했습니다.");
-    } finally {
-      dispatch(setLoading(false));
+      subscribeToChatRoom(chatRoomId); // WebSocket으로 채팅방 구독
+    } catch (error) {
+      dispatch(setError("채팅방 구독에 실패했습니다."));
+      toast.error("채팅방 구독에 실패했습니다.");
     }
   };
-}
 
-// 메시지 전송
-export function sendMessage(conversationId: string, content: string) {
-  return async (dispatch: AppDispatch, getState: () => RootState) => {
-    const state = getState();
-    const { user } = state.auth;
-    const message = {
-      id: new Date().toISOString(),
-      content,
-      author: user.name, // 로그인된 유저 정보에서 이름 가져오기
-      timestamp: new Date().toISOString(),
-    };
-
-    dispatch(sendMessageSuccess(message));
-
+// 채팅방 구독 해제
+export const unsubscribeFromRoom =
+  (chatRoomId: string) => (dispatch: AppDispatch) => {
     try {
-      await axios.post(`/chat/conversations/${conversationId}/messages`, {
+      unsubscribeFromChatRoom(chatRoomId); // WebSocket 구독 해제
+      toast.success("채팅방 구독 해제됨");
+    } catch (error) {
+      dispatch(setError("채팅방 구독 해제에 실패했습니다."));
+      toast.error("채팅방 구독 해제에 실패했습니다.");
+    }
+  };
+
+// 메시지 전송 (WebSocket)
+export const sendMessage =
+  (chatRoomId: string, content: string, token: string) =>
+  (dispatch: AppDispatch, getState: () => RootState) => {
+    try {
+      const user = getState().auth.user;
+      sendMessageSocket(chatRoomId, content, token); // WebSocket으로 메시지 전송
+      const message: Message = {
+        id: new Date().toISOString(),
         content,
-      });
-      toast.success("메시지를 성공적으로 보냈습니다.");
-    } catch (error: any) {
-      dispatch(setError(error.message || "메시지를 보내는 데 실패했습니다."));
-      toast.error(error.message || "메시지를 보내는 데 실패했습니다.");
+        author: user.name, // Redux 상태에서 유저 정보 가져오기
+        timestamp: new Date().toISOString(),
+      };
+      dispatch(addMessageSuccess(message)); // Redux 상태 업데이트
+    } catch (error) {
+      dispatch(setError("메시지를 보내는 데 실패했습니다."));
+      toast.error("메시지를 보내는 데 실패했습니다.");
     }
   };
-}
 
-// 새로운 채팅방 생성
-export function createConversation(participants: string[]) {
-  return async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      const response = await axios.post("/chatRoom/create", {
-        participants,
-      });
-      dispatch(addNewConversation(response.data));
-      toast.success("새 채팅방이 생성되었습니다.");
-    } catch (error: any) {
-      dispatch(setError(error.message || "채팅방을 생성하는 데 실패했습니다."));
-      toast.error(error.message || "채팅방을 생성하는 데 실패했습니다.");
-    } finally {
-      dispatch(setLoading(false));
-    }
+// 타이핑 상태 업데이트
+export const sendTypingStatus =
+  (chatRoomId: string, token: string) => (dispatch: AppDispatch) => {
+    notifyTyping(chatRoomId, token); // WebSocket으로 타이핑 상태 알림
   };
-}
-
-// 채팅방 나가기
-export function leaveConversation(conversationId: string) {
-  return async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      await axios.post(`/chatRoom/leave`, { conversationId });
-      toast.success("채팅방에서 나왔습니다.");
-    } catch (error: any) {
-      dispatch(setError(error.message || "채팅방 나가기에 실패했습니다."));
-      toast.error(error.message || "채팅방 나가기에 실패했습니다.");
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-}
-
-// 채팅방 초대
-export function inviteToConversation(
-  conversationId: string,
-  participants: string[]
-) {
-  return async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      await axios.post(`/chatRoom/invite`, { conversationId, participants });
-      toast.success("채팅방에 초대하였습니다.");
-    } catch (error: any) {
-      dispatch(setError(error.message || "채팅방 초대에 실패했습니다."));
-      toast.error(error.message || "채팅방 초대에 실패했습니다.");
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-}
-
-// 채팅방 이름 변경
-export function updateConversationName(
-  conversationId: string,
-  newName: string
-) {
-  return async (dispatch: AppDispatch) => {
-    dispatch(setLoading(true));
-    try {
-      await axios.post(`/chatRoom/nameUpdate`, { conversationId, newName });
-      toast.success("채팅방 이름이 변경되었습니다.");
-    } catch (error: any) {
-      dispatch(setError(error.message || "채팅방 이름 변경에 실패했습니다."));
-      toast.error(error.message || "채팅방 이름 변경에 실패했습니다.");
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-}
 
 // 현재 채팅방 설정
-export function setCurrentChat(conversationId: string) {
-  return (dispatch: AppDispatch, getState: () => RootState) => {
+export const setCurrentChat =
+  (conversationId: string) =>
+  (dispatch: AppDispatch, getState: () => RootState) => {
     const state = getState();
     const conversation = state.chat.conversations.find(
       (conv: { id: string }) => conv.id === conversationId
@@ -207,11 +198,3 @@ export function setCurrentChat(conversationId: string) {
       dispatch(setError("채팅방을 찾을 수 없습니다."));
     }
   };
-}
-
-// 타이핑 상태 업데이트
-export function updateTypingStatus(data: Record<string, any>) {
-  return async (dispatch: AppDispatch) => {
-    dispatch(updateTyping(data));
-  };
-}
