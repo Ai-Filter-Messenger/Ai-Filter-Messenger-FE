@@ -50,51 +50,55 @@ const withSuspense = (Component: React.ComponentType) => (
 export default function Router() {
   return useRoutes([
     {
-      // 일반 경로
+      // 채팅 페이지
       path: "/chat",
       element: (
         <DashboardLayout
-          leftComponent={withSuspense(ChatPage)} // ChatPage
+          leftComponent={withSuspense(ChatPage)} // ChatPage 렌더링
         />
       ),
     },
     {
+      // 연락처 페이지
       path: "/contacts",
       element: (
         <DashboardLayout
-          leftComponent={withSuspense(ContactsPage)} // ContactsPage
+          leftComponent={withSuspense(ContactsPage)} // ContactsPage 렌더링
         />
       ),
     },
     {
+      // 검색 페이지
       path: "/search",
       element: (
         <DashboardLayout
-          leftComponent={withSuspense(SearchPage)} // SearchPage
-          isCustom={true} // MainLayout 커스텀 레이아웃 사용
+          leftComponent={withSuspense(SearchPage)} // SearchPage 렌더링
+          isCustom={true} // SearchPage에서 커스텀 레이아웃 사용
         />
       ),
     },
     {
+      // 설정 페이지
       path: "/settings",
       element: (
         <DashboardLayout
-          leftComponent={withSuspense(SettingsPage)} // SettingsPage
+          leftComponent={withSuspense(SettingsPage)} // SettingsPage 렌더링
         />
       ),
     },
     {
-      // Auth 하위 페이지
+      // Auth 관련 페이지 경로
       path: "/auth",
-      element: <AuthLayout />, // AuthLayout 사용
+      element: <AuthLayout />, // AuthLayout 적용
       children: [
-        { path: "login", element: withSuspense(LoginPage) },
-        { path: "register", element: withSuspense(RegisterPage) },
-        { path: "find-id", element: withSuspense(FindIdPage) },
-        { path: "find-password", element: withSuspense(FindPasswordPage) },
-        { path: "reset-password", element: withSuspense(ResetPasswordPage) },
+        { path: "login", element: withSuspense(LoginPage) }, // 로그인 페이지
+        { path: "register", element: withSuspense(RegisterPage) }, // 회원가입 페이지
+        { path: "find-id", element: withSuspense(FindIdPage) }, // 아이디 찾기
+        { path: "find-password", element: withSuspense(FindPasswordPage) }, // 비밀번호 찾기
+        { path: "reset-password", element: withSuspense(ResetPasswordPage) }, // 비밀번호 재설정
       ],
     },
-    { path: "*", element: <Navigate to="/auth/login" replace /> }, // 기본적으로 /chat으로 리디렉션
+    // 로그인 페이지로 리디렉션
+    { path: "*", element: <Navigate to="/auth/login" replace /> },
   ]);
 }

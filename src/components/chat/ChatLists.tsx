@@ -13,7 +13,7 @@ import {
   IconButton,
 } from "@mui/material";
 import { AppDispatch, RootState } from "@/redux/store";
-import { setCurrentChat } from "@/redux/slices/chat";
+import { setCurrentChat } from "@/redux/slices/chat"; // 현재 채팅방 설정
 import { FaPlus } from "react-icons/fa6";
 import axios from "@/utils/axios";
 import SearchBar from "@/components/SearchBar";
@@ -23,7 +23,7 @@ interface ChatRoom {
   chatRoomId: string;
   type: string;
   roomName: string;
-  users: string[]; // 유저 이름 배열로 변경
+  users: string[];
   profileImages: string[];
   userCount: number;
   lastMessage: string;
@@ -76,14 +76,11 @@ const ChatLists: React.FC = () => {
     },
   ]);
 
-  // 검색된 결과 저장할 state 추가
   const [filteredRooms, setFilteredRooms] = useState<ChatRoom[]>(chatRooms);
-
-  // 채팅방 create 모달
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [chatRoomType, setChatRoomType] = useState("GENERAL");
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
-  const [friendSearch, setFriendSearch] = useState(""); // Search input for friends
+  const [friendSearch, setFriendSearch] = useState<string>("");
   const [selectedChatRoomId, setSelectedChatRoomId] = useState<string | null>(
     null
   );
@@ -91,13 +88,13 @@ const ChatLists: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  // Retrieve loginId from Redux state
   const loginId = useSelector((state: RootState) => state.auth.user.loginId);
 
+  // 채팅방 클릭 시, 해당 방을 현재 방으로 설정하고, 해당 방의 URL로 이동
   const handleRoomClick = (chatRoomId: string) => {
-    setSelectedChatRoomId(chatRoomId); // Set selected room ID
-    dispatch(setCurrentChat(chatRoomId));
-    navigate(`/chat/${chatRoomId}`);
+    setSelectedChatRoomId(chatRoomId);
+    dispatch(setCurrentChat(chatRoomId)); // 현재 채팅방 설정
+    navigate(`/chat/${chatRoomId}`); // 해당 채팅방으로 이동
   };
 
   const renderProfileImages = (images: string[], userCount: number) => {
@@ -121,14 +118,14 @@ const ChatLists: React.FC = () => {
   // 검색어가 바뀔 때마다 필터링된 채팅방을 업데이트
   const handleSearch = (query: string) => {
     if (query === "") {
-      setFilteredRooms(chatRooms); // 검색어가 없으면 전체 채팅방 표시
+      setFilteredRooms(chatRooms);
     } else {
       const filtered = chatRooms.filter(
         (room) =>
-          room.roomName.toLowerCase().includes(query.toLowerCase()) || // roomName으로 검색
+          room.roomName.toLowerCase().includes(query.toLowerCase()) ||
           room.users.some((user) =>
             user.toLowerCase().includes(query.toLowerCase())
-          ) // users 배열에서 검색
+          )
       );
       setFilteredRooms(filtered);
     }
@@ -137,7 +134,7 @@ const ChatLists: React.FC = () => {
   const handleCreateRoom = async () => {
     try {
       const response = await axios.post("/api/chat/create", {
-        loginId: loginId, // Use the actual loginId from Redux state
+        loginId: loginId,
         roomName: "",
         nicknames: selectedFriends,
         type: chatRoomType,
@@ -163,7 +160,6 @@ const ChatLists: React.FC = () => {
         </IconButton>
       </Box>
 
-      {/* SearchBar 컴포넌트 추가 */}
       <SearchBar onSearch={handleSearch} />
 
       {filteredRooms.map((room) => (
@@ -175,7 +171,7 @@ const ChatLists: React.FC = () => {
               ? styles.selectedChatRoom
               : {}),
           }}
-          onClick={() => handleRoomClick(room.chatRoomId)}
+          onClick={() => handleRoomClick(room.chatRoomId)} // 클릭 시 해당 채팅방 렌더링
           onMouseEnter={(e) =>
             (e.currentTarget.style.backgroundColor = "#333333")
           }
@@ -210,7 +206,6 @@ const ChatLists: React.FC = () => {
         </Box>
       ))}
 
-      {/* Modal for creating a new chat room */}
       <Modal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -219,7 +214,6 @@ const ChatLists: React.FC = () => {
         <Box sx={styles.modalContent}>
           <Typography variant="h6">새 채팅방 만들기</Typography>
 
-          {/* Select Chat Room Type */}
           <TextField
             select
             label="채팅방 유형"
@@ -231,7 +225,6 @@ const ChatLists: React.FC = () => {
             <MenuItem value="OPEN">오픈 채팅</MenuItem>
           </TextField>
 
-          {/* Search Friends */}
           <TextField
             label="친구를 검색하세요"
             value={friendSearch}
@@ -239,7 +232,6 @@ const ChatLists: React.FC = () => {
             sx={styles.textField}
           />
 
-          {/* List of selected friends */}
           <Box sx={styles.selectedFriends}>
             {selectedFriends.map((friend) => (
               <Badge key={friend} badgeContent="x" color="error">

@@ -22,7 +22,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
       <Box
         sx={{
           flexBasis: "20%",
-          borderRight: "1px solid #ddd",
+          // borderRight: "1px solid #ddd",
           backgroundColor: theme.palette.background.left,
         }}
       >
@@ -45,7 +45,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({
           <Box
             sx={{
               flexGrow: 1,
-              borderRight: "1px solid #ddd",
+              // borderRight: "1px solid #ddd",
               backgroundColor: theme.palette.background.left,
             }}
           >
