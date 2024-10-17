@@ -16,14 +16,13 @@ import { AppDispatch, RootState } from "@/redux/store";
 import { setCurrentChat } from "@/redux/slices/chat";
 import { FaPlus } from "react-icons/fa6";
 import axios from "@/utils/axios";
-import SearchBar from "@/components/SearchBar";
+import SearchBar from "@/components/SearchBar"; // SearchBar 컴포넌트 가져오기
 
 // ChatRoom 데이터 타입 정의
 interface ChatRoom {
   chatRoomId: string;
   type: string;
   roomName: string;
-  users: string[]; // 유저 이름 배열로 변경
   profileImages: string[];
   userCount: number;
   lastMessage: string;
@@ -37,7 +36,6 @@ const ChatLists: React.FC = () => {
       chatRoomId: "1",
       type: "GENERAL",
       roomName: "구재희",
-      users: ["구재희"],
       profileImages: ["https://randomuser.me/api/portraits/men/1.jpg"],
       userCount: 1,
       lastMessage: "응~ 끝나고 전화할게",
@@ -48,7 +46,6 @@ const ChatLists: React.FC = () => {
       chatRoomId: "2",
       type: "GENERAL",
       roomName: "개발 3팀",
-      users: ["구재희", "장흥수", "이재현"],
       profileImages: [
         "https://randomuser.me/api/portraits/men/3.jpg",
         "https://randomuser.me/api/portraits/women/1.jpg",
@@ -63,7 +60,6 @@ const ChatLists: React.FC = () => {
       chatRoomId: "3",
       type: "GENERAL",
       roomName: "가족",
-      users: ["강승원", "강지원", "이수민"],
       profileImages: [
         "https://randomuser.me/api/portraits/men/5.jpg",
         "https://randomuser.me/api/portraits/women/2.jpg",
@@ -118,6 +114,26 @@ const ChatLists: React.FC = () => {
     );
   };
 
+  // // 채팅방 검색 처리 함수
+  // const handleSearch = (query: string) => {
+  //   if (!query) {
+  //     setFilteredRooms(chatRooms); // 검색어가 없으면 전체 채팅방 표시
+  //   } else {
+  //     const lowercasedQuery = query.toLowerCase();
+  //     const filtered = chatRooms.filter((room) => {
+  //       // 채팅방 이름 또는 사용자 이름을 검색
+  //       const roomNameMatches = room.roomName
+  //         .toLowerCase()
+  //         .includes(lowercasedQuery);
+  //       const userMatches = room.profileImages.some((img) =>
+  //         img.toLowerCase().includes(lowercasedQuery)
+  //       );
+  //       return roomNameMatches || userMatches;
+  //     });
+  //     setFilteredRooms(filtered);
+  //   }
+  // };
+
   // 검색어가 바뀔 때마다 필터링된 채팅방을 업데이트
   const handleSearch = (query: string) => {
     if (query === "") {
@@ -125,10 +141,10 @@ const ChatLists: React.FC = () => {
     } else {
       const filtered = chatRooms.filter(
         (room) =>
-          room.roomName.toLowerCase().includes(query.toLowerCase()) || // roomName으로 검색
-          room.users.some((user) =>
-            user.toLowerCase().includes(query.toLowerCase())
-          ) // users 배열에서 검색
+          room.roomName.toLowerCase().includes(query.toLowerCase()) ||
+          room.profileImages.some((imgUrl) =>
+            imgUrl.toLowerCase().includes(query.toLowerCase())
+          )
       );
       setFilteredRooms(filtered);
     }
