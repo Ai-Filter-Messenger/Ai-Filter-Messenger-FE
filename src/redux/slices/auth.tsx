@@ -122,9 +122,12 @@ export function RegisterUser(
 export function CheckLoginId(loginId: string) {
   return async (dispatch: AppDispatch) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/user/check/loginId`, {
-        loginId,
-      });
+      const response = await axios.post(
+        `http://localhost:8080/api/user/check/loginId`,
+        {
+          loginId,
+        }
+      );
       if (response.data.isAvailable) {
         toast.success("사용 가능한 아이디입니다.");
       } else {
