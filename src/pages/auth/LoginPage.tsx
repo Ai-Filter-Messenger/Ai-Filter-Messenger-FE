@@ -98,25 +98,18 @@ const LoginPage: React.FC = () => {
         </Button>
       </form>
 
-      <Typography
-        textAlign="center"
-        variant="body2"
-        mb={4}
-        sx={{ position: "relative", width: "100%", color: "#a7a7a7" }}
-      >
+      <Typography component="div" variant="body2" mb={4}>
         <Box
           sx={{
-            position: "absolute",
-            top: "50%",
-            left: 0,
-            right: 0,
             display: "flex",
             alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <Box sx={{ flex: 1, height: "1px", bgcolor: "#a7a7a7", mr: 1 }} />
+          {/* 소셜 로그인 양 옆에 선을 추가 */}
+          <Box sx={{ flex: 1, height: "1px", bgcolor: "#a7a7a7", mr: 2 }} />
           소셜 로그인
-          <Box sx={{ flex: 1, height: "1px", bgcolor: "#a7a7a7", ml: 1 }} />
+          <Box sx={{ flex: 1, height: "1px", bgcolor: "#a7a7a7", ml: 2 }} />
         </Box>
       </Typography>
 

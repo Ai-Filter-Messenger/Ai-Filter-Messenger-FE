@@ -4,6 +4,9 @@ import { toast } from "react-toastify";
 import { AppDispatch, RootState } from "@/redux/store";
 import { NavigateFunction } from "react-router-dom";
 
+// 환경변수에서 API Base URL 가져오기
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 // 초기 상태 정의
 export interface AuthState {
   isLoading: boolean;
@@ -74,7 +77,13 @@ const {
 
 // 회원가입
 export function RegisterUser(
-  formValues: Record<string, any>,
+  formValues: {
+    loginId: string;
+    password: string;
+    nickname: string;
+    name: string;
+    email: string;
+  },
   navigate: NavigateFunction
 ) {
   return async (dispatch: AppDispatch) => {
@@ -82,11 +91,21 @@ export function RegisterUser(
     dispatch(setLoading(true));
 
     try {
-      const response = await axios.post("/user/register", formValues, {
-        headers: {
-          "Content-Type": "application/json",
+      const response = await axios.post(
+        `${API_BASE_URL}/user/register`,
+        {
+          loginId: formValues.loginId,
+          password: formValues.password,
+          nickname: formValues.nickname,
+          name: formValues.name,
+          email: formValues.email,
         },
-      });
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       toast.success("회원가입 성공!");
       navigate(`/auth/verify`);
@@ -103,7 +122,9 @@ export function RegisterUser(
 export function CheckLoginId(loginId: string) {
   return async (dispatch: AppDispatch) => {
     try {
-      const response = await axios.post("/user/checkLoginId", { loginId });
+      const response = await axios.post(`${API_BASE_URL}/user/check/loginId`, {
+        loginId,
+      });
       if (response.data.isAvailable) {
         toast.success("사용 가능한 아이디입니다.");
       } else {
@@ -125,11 +146,15 @@ export function LoginUser(
     dispatch(setLoading(true));
 
     try {
-      const response = await axios.post("/user/login", formValues, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await axios.post(
+        `${API_BASE_URL}/user/login`,
+        formValues,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       dispatch(loginSuccess(response.data.token));
       toast.success("로그인 성공!");
@@ -162,7 +187,7 @@ export function LogoutUser(navigate: NavigateFunction) {
 export function SendEmailVerification(email: string) {
   return async (dispatch: AppDispatch) => {
     try {
-      const response = await axios.post("/mail/send", { email });
+      const response = await axios.post(`${API_BASE_URL}/mail/send`, { email });
       dispatch(sendEmailVerificationSuccess(response.data.code));
       toast.success("인증 코드가 발송되었습니다.");
     } catch (error: any) {
@@ -187,7 +212,7 @@ export function VerifyEmail(verificationCode: string, inputCode: string) {
 export function FindIdByEmail(email: string, verificationCode: string) {
   return async (dispatch: AppDispatch) => {
     try {
-      const response = await axios.post("/mail/check", {
+      const response = await axios.post(`${API_BASE_URL}/mail/check`, {
         email,
         verificationCode,
       });
@@ -202,7 +227,9 @@ export function FindIdByEmail(email: string, verificationCode: string) {
 export function FindPassword(email: string) {
   return async (dispatch: AppDispatch) => {
     try {
-      const response = await axios.post("/user/password/find", { email });
+      const response = await axios.post(`${API_BASE_URL}/user/password/find`, {
+        email,
+      });
       toast.success("임시 비밀번호가 발송되었습니다.");
     } catch (error: any) {
       toast.error("비밀번호 찾기에 실패했습니다.");
@@ -214,7 +241,7 @@ export function FindPassword(email: string) {
 export function ResetPassword(email: string, verificationCode: string) {
   return async (dispatch: AppDispatch) => {
     try {
-      const response = await axios.post("/user/password/find", {
+      const response = await axios.post(`${API_BASE_URL}/user/password/find`, {
         email,
         verificationCode,
       });
@@ -229,7 +256,7 @@ export function ResetPassword(email: string, verificationCode: string) {
 export function SendLoginInfo() {
   return async (dispatch: AppDispatch, getState: () => RootState) => {
     try {
-      await axios.post("/follow/loginInfo", {
+      await axios.post(`${API_BASE_URL}/follow/loginInfo`, {
         userId: getState().auth.user.id,
       });
       toast.success("친구에게 로그인 정보가 전송되었습니다.");
@@ -243,7 +270,7 @@ export function SendLoginInfo() {
 export function SendLogoutInfo() {
   return async (dispatch: AppDispatch, getState: () => RootState) => {
     try {
-      await axios.post("/follow/logoutInfo", {
+      await axios.post(`${API_BASE_URL}/follow/logoutInfo`, {
         userId: getState().auth.user.id,
       });
       toast.success("친구에게 로그아웃 정보가 전송되었습니다.");
@@ -257,7 +284,7 @@ export function SendLogoutInfo() {
 export function KakaoLogin() {
   return async (dispatch: AppDispatch) => {
     try {
-      const response = await axios.get("/user/login/kakao");
+      const response = await axios.get(`${API_BASE_URL}/user/login/kakao`);
       dispatch(loginSuccess(response.data.token));
       toast.success("카카오 로그인 성공!");
     } catch (error: any) {
@@ -266,4 +293,4 @@ export function KakaoLogin() {
   };
 }
 
-// 소셜 로그인(네이버, 구글) 나중에 추가하기
+// 나머지 소셜 로그인

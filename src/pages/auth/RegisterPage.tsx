@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   CheckLoginId,
@@ -20,6 +20,9 @@ import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
 
 const RegisterPage: React.FC = () => {
+  useEffect(() => {
+    console.log("VITE_BASE_URL:", import.meta.env.VITE_BASE_URL);
+  }, []);
   const [loginId, setLoginId] = useState<string>("");
   const [emailUser, setEmailUser] = useState<string>("");
   const [emailDomain, setEmailDomain] = useState<string>("gmail.com");
