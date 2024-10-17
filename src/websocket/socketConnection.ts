@@ -11,7 +11,7 @@ import { store } from "@/redux/store"; // Redux store 직접 참조
 import { updateTypingStatus } from "@/redux/slices/chatbackup";
 
 // WebSocket 서버 URL
-const SOCKET_URL = "http://localhost:8080/ws";
+const SOCKET_URL = "http://localhost:8080/chat";
 
 // STOMP 클라이언트 생성
 let stompClient: CompatClient | null = null;
