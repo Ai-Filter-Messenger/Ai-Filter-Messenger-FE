@@ -3,7 +3,7 @@ import { PaletteOptions } from "@mui/material/styles";
 const palette: PaletteOptions = {
   mode: "dark", // 다크 모드
   primary: {
-    main: "#0095FF", // 메시지 버튼 색상
+    main: "#6D25FF", // 메시지 버튼 색상
     light: "#1F2933", // 기본 배경
     dark: "#121212", // 전반적인 배경색과 유사
     contrastText: "#ffffff", // 텍스트는 밝은 색상

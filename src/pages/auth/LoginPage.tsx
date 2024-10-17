@@ -98,8 +98,26 @@ const LoginPage: React.FC = () => {
         </Button>
       </form>
 
-      <Typography textAlign="center" variant="body2" mb={2}>
-        소셜 로그인
+      <Typography
+        textAlign="center"
+        variant="body2"
+        mb={4}
+        sx={{ position: "relative", width: "100%", color: "#a7a7a7" }}
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: 0,
+            right: 0,
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <Box sx={{ flex: 1, height: "1px", bgcolor: "#a7a7a7", mr: 1 }} />
+          소셜 로그인
+          <Box sx={{ flex: 1, height: "1px", bgcolor: "#a7a7a7", ml: 1 }} />
+        </Box>
       </Typography>
 
       {/* 소셜 로그인 버튼 */}
@@ -116,10 +134,11 @@ const LoginPage: React.FC = () => {
           sx={{
             flex: 1,
             mr: 1,
-            color: "white", // 텍스트 색상 흰색으로
-            borderColor: "white", // 테두리 색상 흰색으로
+            color: "#a7a7a7", // 텍스트 색상
+            borderColor: "#a7a7a7", // 테두리 색상
             "&:hover": {
-              borderColor: "white", // 호버 시에도 테두리 흰색 유지
+              color: "white",
+              borderColor: "white", // 호버 시에 흰색으로
             },
           }}
         >
@@ -137,10 +156,11 @@ const LoginPage: React.FC = () => {
           sx={{
             flex: 1,
             mr: 1,
-            color: "white", // 텍스트 색상 흰색으로
-            borderColor: "white", // 테두리 색상 흰색으로
+            color: "#a7a7a7", // 텍스트 색상
+            borderColor: "#a7a7a7", // 테두리 색상
             "&:hover": {
-              borderColor: "white", // 호버 시에도 테두리 흰색 유지
+              color: "white",
+              borderColor: "white", // 호버 시에 흰색으로
             },
           }}
         >
@@ -157,10 +177,12 @@ const LoginPage: React.FC = () => {
           }
           sx={{
             flex: 1,
-            color: "white", // 텍스트 색상 흰색으로
-            borderColor: "white", // 테두리 색상 흰색으로
+            mr: 1,
+            color: "#a7a7a7", // 텍스트 색상
+            borderColor: "#a7a7a7", // 테두리 색상
             "&:hover": {
-              borderColor: "white", // 호버 시에도 테두리 흰색 유지
+              color: "white",
+              borderColor: "white", // 호버 시에 흰색으로
             },
           }}
         >

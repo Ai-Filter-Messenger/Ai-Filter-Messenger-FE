@@ -10,7 +10,7 @@ const AuthLayout: React.FC = () => {
       display="flex"
       justifyContent="flex-end" // Align to the right
       minHeight="100vh"
-      sx={{ bgcolor: "#121212", color: "white", position: "relative" }}
+      sx={{ bgcolor: "#1f1f1f", color: "white", position: "relative" }}
     >
       {/* Header with links */}
       <Box
@@ -49,7 +49,7 @@ const AuthLayout: React.FC = () => {
         alignItems="flex-start"
         width="100%"
         maxWidth="500px"
-        marginRight="5%"
+        marginRight="10%"
         paddingTop="3rem"
       >
         {/* Main content rendered here */}
@@ -59,8 +59,12 @@ const AuthLayout: React.FC = () => {
           alignItems="center"
           justifyContent="center"
           width="100%"
-          maxWidth="350px"
-          //   marginTop="2rem"
+          maxWidth="30rem"
+          bgcolor="#252525"
+          sx={{
+            borderRadius: "12px", // 모서리 둥글게
+            padding: "3rem 4rem",
+          }}
         >
           <Outlet />
         </Box>

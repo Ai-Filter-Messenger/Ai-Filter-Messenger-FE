@@ -75,23 +75,24 @@ const RegisterPage: React.FC = () => {
       </Typography>
 
       {/* 아이디 입력 및 중복 확인 */}
-      <TextField
-        fullWidth
-        label="아이디"
-        variant="outlined"
-        value={loginId}
-        onChange={(e) => setLoginId(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-      <Button
-        variant="outlined"
-        fullWidth
-        onClick={handleCheckLoginId}
-        disabled={isLoading}
-        sx={{ mb: 2 }}
-      >
-        중복확인
-      </Button>
+      <Box display="flex" alignItems="center" mb={2}>
+        <TextField
+          fullWidth
+          label="아이디"
+          variant="outlined"
+          value={loginId}
+          onChange={(e) => setLoginId(e.target.value)}
+          sx={{ flex: 3, mr: 2 }} // 아이디 필드 크기 조정
+        />
+        <Button
+          variant="outlined"
+          onClick={handleCheckLoginId}
+          disabled={isLoading}
+          sx={{ flex: 1, height: "3.55rem" }} // 버튼 크기 조정
+        >
+          중복확인
+        </Button>
+      </Box>
 
       {/* 이메일 입력 */}
       <Box display="flex" mb={2}>
