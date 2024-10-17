@@ -2,28 +2,28 @@ import { configureStore } from "@reduxjs/toolkit";
 import {
   useDispatch as useAppDispatch,
   useSelector as useAppSelector,
+  TypedUseSelectorHook,
 } from "react-redux";
 import { persistStore, persistReducer } from "redux-persist";
-import { rootPersistConfig, rootReducer } from "./rootReducer"; // rootReducer를 불러옴
-import storage from "redux-persist/lib/storage"; // localStorage에 상태 저장
+import storage from "redux-persist/lib/storage";
+import { rootReducer } from "./rootReducer"; // rootReducer 가져오기
 
-// persistConfig 설정 (redux-persist)
+// persistConfig 설정
 const persistConfig = {
   key: "root",
   storage,
-  //   whitelist: ["auth"], // auth 상태만 저장 (필요한 slice 추가)
-  // blacklist: ["state"], // persist에서 제외
+  whitelist: ["auth"], // 예시로 auth 상태만 저장하도록 설정
 };
 
 // persistReducer 생성
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
-// RootState 타입 정의 (중복 제거)
+// RootState 타입 정의
 export type RootState = ReturnType<typeof rootReducer>;
 
 // 스토어 생성
-const store = configureStore({
-  reducer: persistedReducer, // rootReducer 대신 persistReducer 적용
+export const store = configureStore({
+  reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false, // 직렬화 경고 방지
@@ -32,13 +32,11 @@ const store = configureStore({
 });
 
 // persistStore 생성
-const persistor = persistStore(store);
+export const persistor = persistStore(store);
 
-// 타입 설정
+// AppDispatch 타입 정의
 export type AppDispatch = typeof store.dispatch;
 
 // Redux의 useDispatch와 useSelector 커스텀 훅 생성
 export const useDispatch = () => useAppDispatch<AppDispatch>();
-export const useSelector: typeof useAppSelector = useAppSelector;
-
-export { store, persistor };
+export const useSelector: TypedUseSelectorHook<RootState> = useAppSelector;

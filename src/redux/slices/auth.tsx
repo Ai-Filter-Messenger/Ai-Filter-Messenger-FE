@@ -49,15 +49,12 @@ const slice = createSlice({
       state.user = {}; // 로그아웃 시 유저 정보 초기화
     },
     sendEmailVerificationSuccess(state, action: PayloadAction<string>) {
-      // 이메일 인증 코드 발송 성공
       state.emailVerificationCode = action.payload;
     },
     verifyEmailSuccess(state) {
-      // 이메일 인증 성공
       state.isEmailVerified = true;
     },
     resetEmailVerification(state) {
-      // 초기화 액션
       state.emailVerificationCode = null;
       state.isEmailVerified = false;
     },
@@ -73,7 +70,6 @@ const {
   logoutSuccess,
   sendEmailVerificationSuccess,
   verifyEmailSuccess,
-  resetEmailVerification,
 } = slice.actions;
 
 // 회원가입
@@ -81,7 +77,7 @@ export function RegisterUser(
   formValues: Record<string, any>,
   navigate: NavigateFunction
 ) {
-  return async (dispatch: AppDispatch, getState: () => RootState) => {
+  return async (dispatch: AppDispatch) => {
     dispatch(setError(null));
     dispatch(setLoading(true));
 
@@ -124,7 +120,7 @@ export function LoginUser(
   formValues: Record<string, any>,
   navigate: NavigateFunction
 ) {
-  return async (dispatch: AppDispatch, getState: () => RootState) => {
+  return async (dispatch: AppDispatch) => {
     dispatch(setError(null));
     dispatch(setLoading(true));
 

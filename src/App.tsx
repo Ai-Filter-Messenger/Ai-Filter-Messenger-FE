@@ -1,13 +1,16 @@
-// src/App.tsx
 import React from "react";
-import { BrowserRouter as Router } from "react-router-dom";
-import RouterConfig from "./routes"; // Router 설정 파일
+import { Provider } from "react-redux";
+import { BrowserRouter } from "react-router-dom";
+import { store } from "@/redux/store"; // store를 불러옴
+import Router from "@/routes";
 
 const App = () => {
   return (
-    <Router>
-      <RouterConfig /> {/* 라우터 설정을 불러옴 */}
-    </Router>
+    <Provider store={store}>
+      <BrowserRouter>
+        <Router />
+      </BrowserRouter>
+    </Provider>
   );
 };
 

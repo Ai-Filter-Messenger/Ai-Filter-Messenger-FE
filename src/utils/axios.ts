@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:8080";
 
 // Axios 인스턴스 생성
 const axiosInstance = axios.create({
@@ -30,16 +30,22 @@ axiosInstance.interceptors.request.use(
 // 응답 인터셉터
 axiosInstance.interceptors.response.use(
   (response) => {
-    // 응답 데이터를 처리
     return response;
   },
   (error) => {
-    // 응답 오류 처리 (예: 토큰 만료 등)
-    if (error.response && error.response.status === 401) {
-      // 401 Unauthorized 에러 처리 (예: 로그아웃 처리 등)
-      console.log("Unauthorized access - Redirecting to login.");
-      // 로그아웃 처리 및 로그인 페이지로 리다이렉트 등
-      // window.location.href = "/login";
+    if (error.response) {
+      // 서버로부터의 응답이 있는 경우
+      console.error(
+        "Response error",
+        error.response.status,
+        error.response.data
+      );
+    } else if (error.request) {
+      // 요청은 전송되었지만 응답이 없는 경우
+      console.error("No response received", error.request);
+    } else {
+      // 요청 설정 중에 발생한 오류
+      console.error("Error in request", error.message);
     }
     return Promise.reject(error);
   }

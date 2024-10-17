@@ -10,9 +10,12 @@ const palette: PaletteOptions = {
   },
   background: {
     default: "#121212", // 메인 배경
-    paper: "#1C1C1F", // 카드형 UI 배경 (사이드바 및 오른쪽 컴포넌트)
-    left: "#212328", // MainLayout 왼쪽과 중앙의 배경색
-    right: "#1C1C1F", // MainLayout 오른쪽 배경색
+    // paper: "#1C1C1F", // 카드형 UI 배경 (사이드바 및 오른쪽 컴포넌트)
+    paper: "#1f1f1f", // 카드형 UI 배경 (사이드바 및 오른쪽 컴포넌트)
+    // left: "#212328", // MainLayout 왼쪽과 중앙의 배경색
+    left: "#252525", // MainLayout 왼쪽과 중앙의 배경색
+    // right: "#1C1C1F", // MainLayout 오른쪽 배경색
+    right: "#1f1f1f", // MainLayout 오른쪽 배경색
   },
   text: {
     primary: "#ffffff", // 일반 텍스트
