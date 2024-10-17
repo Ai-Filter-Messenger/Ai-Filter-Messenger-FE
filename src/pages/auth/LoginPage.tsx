@@ -15,7 +15,7 @@ import { RootState, AppDispatch } from "@/redux/store"; // RootState, AppDispatc
 
 const LoginPage: React.FC = () => {
   useEffect(() => {
-    console.log("VITE_BASE_URL:", import.meta.env.VITE_BASE_URL);
+    console.log("VITE_BASE_URL:", import.meta.env.VITE_API_BASE_URL);
   }, []);
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");

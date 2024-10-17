@@ -134,6 +134,7 @@ export function CheckLoginId(loginId: string) {
         toast.error("이미 사용 중인 아이디입니다.");
       }
     } catch (error: any) {
+      console.error("아이디 중복 확인 에러:", error.response || error.message);
       toast.error("아이디 중복 확인 실패.");
     }
   };

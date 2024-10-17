@@ -21,7 +21,7 @@ import { useNavigate } from "react-router-dom";
 
 const RegisterPage: React.FC = () => {
   useEffect(() => {
-    console.log("VITE_BASE_URL:", import.meta.env.VITE_BASE_URL);
+    console.log("VITE_BASE_URL:", import.meta.env.VITE_API_BASE_URL);
   }, []);
   const [loginId, setLoginId] = useState<string>("");
   const [emailUser, setEmailUser] = useState<string>("");
