@@ -4,7 +4,7 @@ import {
   useSelector as useAppSelector,
   TypedUseSelectorHook,
 } from "react-redux";
-import { persistStore, persistReducer } from "redux-persist";
+import { persistStore, persistReducer } from "redux-persist"; // No need to import PersistPartial
 import storage from "redux-persist/lib/storage";
 import { rootReducer } from "./rootReducer"; // rootReducer 가져오기
 
@@ -12,14 +12,10 @@ import { rootReducer } from "./rootReducer"; // rootReducer 가져오기
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["auth"], // 예시로 auth 상태만 저장하도록 설정
 };
 
 // persistReducer 생성
 const persistedReducer = persistReducer(persistConfig, rootReducer);
-
-// RootState 타입 정의
-export type RootState = ReturnType<typeof rootReducer>;
 
 // 스토어 생성
 export const store = configureStore({
@@ -33,6 +29,9 @@ export const store = configureStore({
 
 // persistStore 생성
 export const persistor = persistStore(store);
+
+// RootState 정의
+export type RootState = ReturnType<typeof store.getState>; // No PersistPartial
 
 // AppDispatch 타입 정의
 export type AppDispatch = typeof store.dispatch;

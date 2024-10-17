@@ -40,7 +40,7 @@ const slice = createSlice({
       state.isLoading = action.payload;
     },
     fetchUserSuccess(state, action: PayloadAction<Record<string, any>>) {
-      state.user = action.payload;
+      state.user = action.payload; // user 객체에 loginId를 포함한 유저 정보가 저장
     },
     loginSuccess(state, action: PayloadAction<string>) {
       state.isLoggedIn = true;

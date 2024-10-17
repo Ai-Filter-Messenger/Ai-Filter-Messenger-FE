@@ -9,7 +9,7 @@ const theme = createTheme({
     h1: {
       fontFamily: "M PLUS Rounded 1c, sans-serif",
       fontWeight: 700,
-      fontSize: "1.025rem",
+      fontSize: "1.5rem",
     },
     h2: {
       fontFamily: "M PLUS Rounded 1c, sans-serif",
@@ -21,12 +21,18 @@ const theme = createTheme({
       fontWeight: 500,
       fontSize: "1.8rem",
     },
+    h4: {
+      fontFamily: "M PLUS Rounded 1c, sans-serif",
+      fontWeight: 700,
+      fontSize: "0.75rem",
+    },
     body1: {
       fontFamily: "M PLUS Rounded 1c, sans-serif",
       fontSize: "1rem", // 16px
       lineHeight: 1.5,
     },
     body2: {
+      fontFamily: "M PLUS Rounded 1c, sans-serif",
       fontSize: "0.875rem", // 14px
       lineHeight: 1.43,
     },

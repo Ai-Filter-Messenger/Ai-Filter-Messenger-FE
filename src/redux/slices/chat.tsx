@@ -1,6 +1,7 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { AppDispatch, RootState } from "@/redux/store";
 import { toast } from "react-toastify";
+import axios from "@/utils/axios";
 import {
   connectWebSocket,
   disconnectWebSocket,
@@ -9,6 +10,7 @@ import {
   unsubscribeFromChatRoom,
   notifyTyping,
 } from "@/websocket/socketConnection";
+import { PersistPartial } from "redux-persist/es/persistReducer";
 
 // 채팅 상태 정의
 export interface Message {
@@ -24,8 +26,20 @@ export interface Conversation {
   messages: Message[];
 }
 
+export interface ChatRoom {
+  chatRoomId: string;
+  type: string;
+  roomName: string;
+  profileImages: string[];
+  userCount: number;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+}
+
 export interface ChatState {
   conversations: Conversation[];
+  chatRooms: ChatRoom[];
   currentConversation: Conversation | null;
   typing: Record<string, any>;
   isLoading: boolean;
@@ -34,11 +48,29 @@ export interface ChatState {
 
 const initialState: ChatState = {
   conversations: [],
+  chatRooms: [],
   currentConversation: null,
   typing: {},
   isLoading: false,
   error: null,
 };
+
+// 채팅방 리스트를 불러오는 비동기 액션 생성
+export const fetchChatRooms = createAsyncThunk<
+  ChatRoom[],
+  void,
+  { state: RootState & PersistPartial }
+>("chat/fetchChatRooms", async (_, { getState, rejectWithValue }) => {
+  try {
+    const loginId = getState().auth.user.loginId;
+    const response = await axios.get("/api/chat/find/list", {
+      params: { loginId },
+    });
+    return response.data;
+  } catch (error) {
+    return rejectWithValue("채팅방 목록을 불러오는 데 실패했습니다.");
+  }
+});
 
 // Slice 생성
 const slice = createSlice({
@@ -98,6 +130,21 @@ const slice = createSlice({
         );
       }
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchChatRooms.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchChatRooms.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.chatRooms = action.payload;
+      })
+      .addCase(fetchChatRooms.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        toast.error(state.error);
+      });
   },
 });
 
@@ -161,7 +208,7 @@ export const unsubscribeFromRoom =
 // 메시지 전송 (WebSocket)
 export const sendMessage =
   (chatRoomId: string, content: string, token: string) =>
-  (dispatch: AppDispatch, getState: () => RootState) => {
+  (dispatch: AppDispatch, getState: () => RootState & PersistPartial) => {
     try {
       const user = getState().auth.user;
       sendMessageSocket(chatRoomId, content, token); // WebSocket으로 메시지 전송
@@ -187,7 +234,7 @@ export const sendTypingStatus =
 // 현재 채팅방 설정
 export const setCurrentChat =
   (conversationId: string) =>
-  (dispatch: AppDispatch, getState: () => RootState) => {
+  (dispatch: AppDispatch, getState: () => RootState & PersistPartial) => {
     const state = getState();
     const conversation = state.chat.conversations.find(
       (conv: { id: string }) => conv.id === conversationId
