@@ -41,6 +41,11 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
     }
   };
 
+  // chatRoomId가 존재할 경우에만 렌더링
+  if (!chatRoomId) {
+    return <Typography>채팅방이 선택되지 않았습니다.</Typography>; // 선택되지 않았을 때의 대체 UI
+  }
+
   return (
     <Box sx={styles.container}>
       {/* 상단 - 사용자 목록 및 아이콘 */}

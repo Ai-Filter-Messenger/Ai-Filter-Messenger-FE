@@ -55,7 +55,7 @@ const ChatLists: React.FC = () => {
       console.log("loginId:", loginId);
       console.log("token:", token);
       try {
-        const response = await axios.get("/api/chat/find/list", {
+        const response = await axios.get("/chat/find/list", {
           headers: {
             Authorization: `Bearer ${token}`, // 인증 토큰을 헤더에 추가
           },
@@ -77,7 +77,10 @@ const ChatLists: React.FC = () => {
   const handleRoomClick = (chatRoomId: string) => {
     setSelectedChatRoomId(chatRoomId);
     dispatch(setCurrentChat(chatRoomId)); // Redux에 현재 채팅방 설정
-    navigate(`/chat/${chatRoomId}`); // 해당 채팅방 URL로 이동
+    // navigate(`/chat/${chatRoomId}/${loginId}`); // 해당 채팅방 URL로 이동
+    navigate(`/chat/${loginId}/${chatRoomId}`); // 해당 채팅방 URL로 이동
+    console.log("handleRoomClick 수행, loginId:", loginId);
+    console.log("handleRoomClick 수행, chatRoomId: ", chatRoomId);
   };
 
   const renderProfileImages = (images: string[], userCount: number) => {
@@ -127,7 +130,7 @@ const ChatLists: React.FC = () => {
         alert("Chat room created successfully!");
         setIsModalOpen(false);
         // 채팅방 목록을 다시 불러와 업데이트
-        const updatedRooms = await axios.get("/api/chat/find/list", {
+        const updatedRooms = await axios.get("/chat/find/list", {
           params: { loginId },
         });
         setChatRooms(updatedRooms.data);

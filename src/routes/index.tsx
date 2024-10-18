@@ -61,6 +61,7 @@ export default function Router() {
     {
       // 특정 채팅방 페이지
       path: "/chat/:loginId/:chatRoomId", // URL에 chatRoomId 추가
+      // path: "/chat/:chatRoomId/:loginId", // URL에 chatRoomId 추가
       element: (
         <DashboardLayout
           leftComponent={withSuspense(ChatPage)} // ChatLists 렌더링

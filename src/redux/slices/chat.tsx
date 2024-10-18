@@ -63,12 +63,26 @@ export const fetchChatRooms = createAsyncThunk<
 >("chat/fetchChatRooms", async (_, { getState, rejectWithValue }) => {
   try {
     const loginId = getState().auth.user.loginId;
-    const response = await axios.get("/api/chat/find/list", {
+    const response = await axios.get("/chat/find/list", {
       params: { loginId },
     });
     return response.data;
   } catch (error) {
     return rejectWithValue("채팅방 목록을 불러오는 데 실패했습니다.");
+  }
+});
+
+// 메시지를 가져오는 비동기 액션 생성
+export const fetchMessages = createAsyncThunk<
+  Message[],
+  string, // chatRoomId를 인자로 받음
+  { state: RootState & PersistPartial }
+>("chat/fetchMessages", async (chatRoomId, { rejectWithValue }) => {
+  try {
+    const response = await axios.get(`/chat/${chatRoomId}/messages`); // 해당 채팅방의 메시지 가져오기
+    return response.data; // 메시지 목록 반환
+  } catch (error) {
+    return rejectWithValue("메시지를 불러오는 데 실패했습니다.");
   }
 });
 
@@ -141,6 +155,21 @@ const slice = createSlice({
         state.chatRooms = action.payload;
       })
       .addCase(fetchChatRooms.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        toast.error(state.error);
+      })
+      // fetchMessages 액션 처리
+      .addCase(fetchMessages.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchMessages.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (state.currentConversation) {
+          state.currentConversation.messages = action.payload; // 가져온 메시지로 현재 대화방의 메시지 업데이트
+        }
+      })
+      .addCase(fetchMessages.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
         toast.error(state.error);
