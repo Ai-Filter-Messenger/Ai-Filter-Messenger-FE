@@ -52,6 +52,8 @@ const ChatLists: React.FC = () => {
   // 채팅방 목록을 서버에서 가져오는 함수
   useEffect(() => {
     const fetchChatRooms = async () => {
+      console.log("loginId:", loginId);
+      console.log("token:", token);
       try {
         const response = await axios.get("/api/chat/find/list", {
           headers: {
