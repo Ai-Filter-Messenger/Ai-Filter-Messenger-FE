@@ -16,19 +16,25 @@ import { RootState, AppDispatch } from "@/redux/store";
 import { sendMessage } from "@/redux/slices/chat";
 import { Message } from "@/redux/slices/chat";
 
-const ChatRoom: React.FC = () => {
+// ChatRoom 컴포넌트에 chatRoomId prop을 받도록 타입 추가
+interface ChatRoomProps {
+  chatRoomId: string | undefined; // chatRoomId가 undefined일 수도 있으므로 optional로 정의
+}
+
+const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const { user, token } = useSelector((state: RootState) => state.auth);
   const { currentConversation } = useSelector((state: RootState) => state.chat);
   const [newMessage, setNewMessage] = useState<string>("");
 
   // 메시지 전송 핸들러
   const handleSendMessage = () => {
-    if (newMessage.trim() !== "") {
+    if (newMessage.trim() !== "" && chatRoomId) {
       dispatch(
         sendMessage(
-          currentConversation?.id || "",
+          chatRoomId, // chatRoomId를 사용
           newMessage,
-          "yourAuthTokenHere"
+          token || "" // token이 없으면 빈 문자열로 처리
         )
       );
       setNewMessage(""); // 메시지 전송 후 입력창 초기화
@@ -40,9 +46,9 @@ const ChatRoom: React.FC = () => {
       {/* 상단 - 사용자 목록 및 아이콘 */}
       <Box sx={styles.topBar}>
         <Box sx={styles.userList}>
-          {currentConversation?.participants.map((user, index) => (
+          {currentConversation?.participants.map((participant, index) => (
             <Avatar key={index} sx={styles.avatar}>
-              {user[0]} {/* 유저 이름의 첫 글자 */}
+              {participant[0]} {/* 유저 이름의 첫 글자 */}
             </Avatar>
           ))}
         </Box>
@@ -65,9 +71,9 @@ const ChatRoom: React.FC = () => {
           <Box
             key={index}
             sx={
-              msg.author === "yourUserNameHere"
-                ? styles.myMessage
-                : styles.theirMessage
+              msg.author === user.name
+                ? styles.myMessage // 로그인된 사용자의 메시지
+                : styles.theirMessage // 상대방의 메시지
             }
           >
             <Typography>{msg.content}</Typography>
@@ -80,13 +86,12 @@ const ChatRoom: React.FC = () => {
       <Box sx={styles.messageInputContainer}>
         <TextField
           fullWidth
-          variant="outlined" // 또는 "filled"
+          variant="outlined" // outlined를 사용하면 기본적으로 밑줄이 없음
           placeholder="Enter a message"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           sx={styles.messageInput}
           InputProps={{
-            disableUnderline: true,
             startAdornment: (
               <InputAdornment position="start">
                 <IconButton sx={styles.inputIcon}>
@@ -192,15 +197,13 @@ const styles = {
     },
   },
   inputIcon: {
-    // padding: "0.5rem", // 입력창 내부 아이콘에 패딩 추가
     fontSize: "1.3rem",
-    // marginLeft: "0.5rem",
     paddingBottom: "0.4rem",
   },
   sendButton: {
-    backgroundColor: "#4e4ef7", // 원형 배경 색상
+    backgroundColor: "#4e4ef7",
     borderRadius: "50%", // 원형 모양
-    padding: "0.5rem", // 패딩을 추가해 버튼 크기 조절
+    padding: "0.5rem",
     marginLeft: "0.5rem",
     marginRight: "0.5rem",
     fontSize: "1.1rem",

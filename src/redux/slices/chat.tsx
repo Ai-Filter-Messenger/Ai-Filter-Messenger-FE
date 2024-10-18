@@ -150,6 +150,30 @@ const slice = createSlice({
 
 export default slice.reducer;
 
+// 테스트용 채팅방 설정 액션
+export const setTestChatRoom = () => (dispatch: AppDispatch) => {
+  const conversation = {
+    id: "1",
+    participants: ["test1", "test2"],
+    messages: [
+      {
+        id: "msg1",
+        content: "안녕하세요 test2님",
+        author: "test1",
+        timestamp: new Date().toISOString(),
+      },
+      {
+        id: "msg2",
+        content: "안녕하세요 test1님",
+        author: "test2",
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+  dispatch(fetchConversationsSuccess([conversation])); // 대화방 추가
+  dispatch(setCurrentConversation(conversation)); // 현재 대화방 설정
+};
+
 export const {
   setError,
   setLoading,

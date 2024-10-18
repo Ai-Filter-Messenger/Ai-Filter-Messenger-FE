@@ -5,7 +5,8 @@ import { AppDispatch, RootState } from "@/redux/store";
 import { NavigateFunction } from "react-router-dom";
 
 // 환경변수에서 API Base URL 가져오기
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 // 초기 상태 정의
 export interface AuthState {
@@ -61,18 +62,29 @@ const slice = createSlice({
       state.emailVerificationCode = null;
       state.isEmailVerified = false;
     },
+    // 테스트 로그인
+    fakeLogin: (state, action: PayloadAction<string>) => {
+      state.user.loginId = action.payload;
+      state.user.name = action.payload; // 임시로 loginId를 이름으로 사용
+      state.token = "fake-token"; // 임시 토큰
+      state.isLoggedIn = true;
+    },
   },
 });
 
 export default slice.reducer;
 
-const {
+// 액션 내보내기
+export const {
   setError,
   setLoading,
   loginSuccess,
   logoutSuccess,
+  fetchUserSuccess,
   sendEmailVerificationSuccess,
   verifyEmailSuccess,
+  resetEmailVerification,
+  fakeLogin,
 } = slice.actions;
 
 // 회원가입
@@ -110,37 +122,15 @@ export function RegisterUser(
       toast.success("회원가입 성공!");
       navigate(`/auth/verify`);
     } catch (error: any) {
-      dispatch(setError(error?.message || "회원가입 실패."));
-      toast.error(error?.message || "회원가입 실패.");
+      dispatch(setError(error?.response?.data?.message || "회원가입 실패."));
+      toast.error(error?.response?.data?.message || "회원가입 실패.");
     } finally {
       dispatch(setLoading(false));
     }
   };
 }
 
-// 아이디 중복 확인
-export function CheckLoginId(loginId: string) {
-  return async (dispatch: AppDispatch) => {
-    try {
-      const response = await axios.post(
-        `http://localhost:8080/api/user/check/loginId`,
-        {
-          loginId,
-        }
-      );
-      if (response.data.isAvailable) {
-        toast.success("사용 가능한 아이디입니다.");
-      } else {
-        toast.error("이미 사용 중인 아이디입니다.");
-      }
-    } catch (error: any) {
-      console.error("아이디 중복 확인 에러:", error.response || error.message);
-      toast.error("아이디 중복 확인 실패.");
-    }
-  };
-}
-
-// 로그인
+// 로그인 (실제 로그인)
 export function LoginUser(
   formValues: Record<string, any>,
   navigate: NavigateFunction
@@ -162,11 +152,10 @@ export function LoginUser(
 
       dispatch(loginSuccess(response.data.token));
       toast.success("로그인 성공!");
-      dispatch(SendLoginInfo()); // 로그인 정보 전송
       navigate(`/chat`);
     } catch (error: any) {
-      dispatch(setError(error?.message || "로그인 실패."));
-      toast.error(error?.message || "로그인 실패.");
+      dispatch(setError(error?.response?.data?.message || "로그인 실패."));
+      toast.error(error?.response?.data?.message || "로그인 실패.");
     } finally {
       dispatch(setLoading(false));
     }
@@ -177,12 +166,35 @@ export function LoginUser(
 export function LogoutUser(navigate: NavigateFunction) {
   return async (dispatch: AppDispatch) => {
     try {
-      dispatch(SendLogoutInfo()); // 로그아웃 정보 전송
       dispatch(logoutSuccess());
       navigate("/login");
       toast.success("로그아웃 완료.");
     } catch (error) {
       console.log(error);
+    }
+  };
+}
+
+// 테스트 유저 로그인 함수
+export const loginTestUser = (loginId: string) => (dispatch: AppDispatch) => {
+  dispatch(fakeLogin(loginId)); // 테스트용 로그인 처리
+  toast.success(`${loginId}로 로그인되었습니다!`);
+};
+
+// 아이디 중복 확인
+export function CheckLoginId(loginId: string) {
+  return async (dispatch: AppDispatch) => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/user/check/loginId`, {
+        loginId,
+      });
+      if (response.data.isAvailable) {
+        toast.success("사용 가능한 아이디입니다.");
+      } else {
+        toast.error("이미 사용 중인 아이디입니다.");
+      }
+    } catch (error: any) {
+      toast.error("아이디 중복 확인 실패.");
     }
   };
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
@@ -32,51 +32,8 @@ interface ChatRoom {
 }
 
 const ChatLists: React.FC = () => {
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([
-    {
-      chatRoomId: "1",
-      type: "GENERAL",
-      roomName: "구재희",
-      users: ["구재희"],
-      profileImages: ["https://randomuser.me/api/portraits/men/1.jpg"],
-      userCount: 1,
-      lastMessage: "응~ 끝나고 전화할게",
-      lastMessageTime: "10:30 AM",
-      unreadCount: 3,
-    },
-    {
-      chatRoomId: "2",
-      type: "GENERAL",
-      roomName: "개발 3팀",
-      users: ["구재희", "장흥수", "이재현"],
-      profileImages: [
-        "https://randomuser.me/api/portraits/men/3.jpg",
-        "https://randomuser.me/api/portraits/women/1.jpg",
-        "https://randomuser.me/api/portraits/men/4.jpg",
-      ],
-      userCount: 3,
-      lastMessage: "전달 사항 참고해주세요.",
-      lastMessageTime: "9:15 AM",
-      unreadCount: 1,
-    },
-    {
-      chatRoomId: "3",
-      type: "GENERAL",
-      roomName: "가족",
-      users: ["강승원", "강지원", "이수민"],
-      profileImages: [
-        "https://randomuser.me/api/portraits/men/5.jpg",
-        "https://randomuser.me/api/portraits/women/2.jpg",
-        "https://randomuser.me/api/portraits/men/6.jpg",
-      ],
-      userCount: 3,
-      lastMessage: "7시에 출발할까?",
-      lastMessageTime: "Yesterday",
-      unreadCount: 0,
-    },
-  ]);
-
-  const [filteredRooms, setFilteredRooms] = useState<ChatRoom[]>(chatRooms);
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [filteredRooms, setFilteredRooms] = useState<ChatRoom[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [chatRoomType, setChatRoomType] = useState("GENERAL");
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
@@ -88,13 +45,37 @@ const ChatLists: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
+  // useSelector를 컴포넌트 최상단에서 호출하여 state 값을 가져옴
   const loginId = useSelector((state: RootState) => state.auth.user.loginId);
+  const token = useSelector((state: RootState) => state.auth.token);
 
-  // 채팅방 클릭 시, 해당 방을 현재 방으로 설정하고, 해당 방의 URL로 이동
+  // 채팅방 목록을 서버에서 가져오는 함수
+  useEffect(() => {
+    const fetchChatRooms = async () => {
+      try {
+        const response = await axios.get("/api/chat/find/list", {
+          headers: {
+            Authorization: `Bearer ${token}`, // 인증 토큰을 헤더에 추가
+          },
+          params: { loginId },
+        });
+        setChatRooms(response.data); // API에서 가져온 데이터로 상태 업데이트
+        setFilteredRooms(response.data); // 필터링된 상태도 업데이트
+      } catch (error) {
+        console.error("Failed to fetch chat rooms:", error);
+      }
+    };
+
+    if (token && loginId) {
+      fetchChatRooms(); // token과 loginId가 존재할 때만 호출
+    }
+  }, [loginId, token]);
+
+  // 채팅방 클릭 시, 해당 방을 현재 방으로 설정 및 이동
   const handleRoomClick = (chatRoomId: string) => {
     setSelectedChatRoomId(chatRoomId);
-    dispatch(setCurrentChat(chatRoomId)); // 현재 채팅방 설정
-    navigate(`/chat/${chatRoomId}`); // 해당 채팅방으로 이동
+    dispatch(setCurrentChat(chatRoomId)); // Redux에 현재 채팅방 설정
+    navigate(`/chat/${chatRoomId}`); // 해당 채팅방 URL로 이동
   };
 
   const renderProfileImages = (images: string[], userCount: number) => {
@@ -143,6 +124,12 @@ const ChatLists: React.FC = () => {
       if (response.status === 200) {
         alert("Chat room created successfully!");
         setIsModalOpen(false);
+        // 채팅방 목록을 다시 불러와 업데이트
+        const updatedRooms = await axios.get("/api/chat/find/list", {
+          params: { loginId },
+        });
+        setChatRooms(updatedRooms.data);
+        setFilteredRooms(updatedRooms.data);
       }
     } catch (error) {
       console.error("Failed to create chat room:", error);

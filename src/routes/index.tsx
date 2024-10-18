@@ -50,11 +50,20 @@ const withSuspense = (Component: React.ComponentType) => (
 export default function Router() {
   return useRoutes([
     {
-      // 채팅 페이지
-      path: "/chat",
+      // 유저의 기본 채팅 페이지
+      path: "/chat/:loginId",
       element: (
         <DashboardLayout
-          leftComponent={withSuspense(ChatPage)} // ChatPage 렌더링
+          leftComponent={withSuspense(ChatPage)} // ChatPage의 좌측 컴포넌트 (채팅 목록)
+        />
+      ),
+    },
+    {
+      // 특정 채팅방 페이지
+      path: "/chat/:loginId/:chatRoomId", // URL에 chatRoomId 추가
+      element: (
+        <DashboardLayout
+          leftComponent={withSuspense(ChatPage)} // ChatLists 렌더링
         />
       ),
     },
