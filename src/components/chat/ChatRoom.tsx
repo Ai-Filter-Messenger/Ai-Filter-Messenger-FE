@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   Box,
@@ -13,8 +13,13 @@ import { FaCirclePlus, FaRegFaceSmile } from "react-icons/fa6";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { IoSend } from "react-icons/io5";
 import { RootState, AppDispatch } from "@/redux/store";
-import { sendMessage } from "@/redux/slices/chat";
+import {
+  addMessageSuccess,
+  sendMessage,
+  setCurrentConversation,
+} from "@/redux/slices/chat";
 import { Message } from "@/redux/slices/chat";
+import { subscribeToChatRoom } from "@/websocket/socketConnection"; // 소켓 연결 추가
 
 // ChatRoom 컴포넌트에 chatRoomId prop을 받도록 타입 추가
 interface ChatRoomProps {
@@ -23,21 +28,44 @@ interface ChatRoomProps {
 
 const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { user, token } = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.auth);
   const { currentConversation } = useSelector((state: RootState) => state.chat);
   const [newMessage, setNewMessage] = useState<string>("");
+
+  useEffect(() => {
+    if (chatRoomId) {
+      // 특정 채팅방 구독
+      subscribeToChatRoom(chatRoomId);
+    }
+  }, [chatRoomId]);
+
+  useEffect(() => {
+    console.log(
+      "Current conversation messages:",
+      currentConversation?.messages
+    );
+  }, [currentConversation]);
 
   // 메시지 전송 핸들러
   const handleSendMessage = () => {
     if (newMessage.trim() !== "" && chatRoomId) {
-      dispatch(
-        sendMessage(
-          chatRoomId, // chatRoomId를 사용
-          newMessage,
-          token || "" // token이 없으면 빈 문자열로 처리
-        )
-      );
-      setNewMessage(""); // 메시지 전송 후 입력창 초기화
+      const message: Message = {
+        id: new Date().toISOString(),
+        content: newMessage,
+        author: user.name,
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log("Sending message:", message);
+
+      // 메시지를 전송하는 액션 호출
+      dispatch(sendMessage(chatRoomId, newMessage, user.token || ""));
+
+      // 현재 대화에 메시지를 추가
+      dispatch(addMessageSuccess(message));
+
+      // 메시지 전송 후 입력창 초기화
+      setNewMessage("");
     }
   };
 

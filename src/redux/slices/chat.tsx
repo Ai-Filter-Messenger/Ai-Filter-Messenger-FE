@@ -9,6 +9,7 @@ import {
   subscribeToChatRoom,
   unsubscribeFromChatRoom,
   notifyTyping,
+  stompClient,
 } from "@/websocket/socketConnection";
 import { PersistPartial } from "redux-persist/es/persistReducer";
 
@@ -167,6 +168,7 @@ const slice = createSlice({
         state.isLoading = false;
         if (state.currentConversation) {
           state.currentConversation.messages = action.payload; // 가져온 메시지로 현재 대화방의 메시지 업데이트
+          console.log(state.currentConversation.messages);
         }
       })
       .addCase(fetchMessages.rejected, (state, action) => {
@@ -177,7 +179,7 @@ const slice = createSlice({
   },
 });
 
-export default slice.reducer;
+// export default slice.reducer;
 
 // 테스트용 채팅방 설정 액션
 export const setTestChatRoom = () => (dispatch: AppDispatch) => {
@@ -264,14 +266,19 @@ export const sendMessage =
   (dispatch: AppDispatch, getState: () => RootState & PersistPartial) => {
     try {
       const user = getState().auth.user;
-      sendMessageSocket(chatRoomId, content, token); // WebSocket으로 메시지 전송
-      const message: Message = {
-        id: new Date().toISOString(),
-        content,
-        author: user.name, // Redux 상태에서 유저 정보 가져오기
-        timestamp: new Date().toISOString(),
-      };
-      dispatch(addMessageSuccess(message)); // Redux 상태 업데이트
+      if (stompClient && stompClient.connected) {
+        sendMessageSocket(chatRoomId, content, token); // WebSocket으로 메시지 전송
+        const message: Message = {
+          id: new Date().toISOString(),
+          content,
+          author: user.name, // Redux 상태에서 유저 정보 가져오기
+          timestamp: new Date().toISOString(),
+        };
+        dispatch(addMessageSuccess(message)); // Redux 상태 업데이트
+      } else {
+        dispatch(setError("WebSocket 연결이 없습니다."));
+        toast.error("WebSocket 연결이 없습니다.");
+      }
     } catch (error) {
       dispatch(setError("메시지를 보내는 데 실패했습니다."));
       toast.error("메시지를 보내는 데 실패했습니다.");
@@ -284,7 +291,7 @@ export const sendTypingStatus =
     notifyTyping(chatRoomId, token); // WebSocket으로 타이핑 상태 알림
   };
 
-// 현재 채팅방 설정
+// 현재 채팅방 설정 및 메시지 로드
 export const setCurrentChat =
   (conversationId: string) =>
   (dispatch: AppDispatch, getState: () => RootState & PersistPartial) => {
@@ -292,9 +299,14 @@ export const setCurrentChat =
     const conversation = state.chat.conversations.find(
       (conv: { id: string }) => conv.id === conversationId
     );
+
     if (conversation) {
       dispatch(setCurrentConversation(conversation));
+      // 해당 채팅방의 메시지를 가져옵니다.
+      dispatch(fetchMessages(conversationId));
     } else {
       dispatch(setError("채팅방을 찾을 수 없습니다."));
     }
   };
+
+export default slice.reducer;
