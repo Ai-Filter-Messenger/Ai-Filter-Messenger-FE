@@ -16,9 +16,11 @@ import { PersistPartial } from "redux-persist/es/persistReducer";
 // 채팅 상태 정의
 export interface Message {
   id: string;
-  content: string;
-  author: string;
-  timestamp: string;
+  message: string; // 내용으로 수정
+  senderName: string; // 작성자 이름으로 수정
+  roomId: string; // 방 ID로 수정
+  createAt: string; // 생성 시간으로 수정
+  type: string; // 메시지 유형 추가
 }
 
 export interface Conversation {
@@ -179,8 +181,6 @@ const slice = createSlice({
   },
 });
 
-// export default slice.reducer;
-
 // 테스트용 채팅방 설정 액션
 export const setTestChatRoom = () => (dispatch: AppDispatch) => {
   const conversation = {
@@ -189,15 +189,19 @@ export const setTestChatRoom = () => (dispatch: AppDispatch) => {
     messages: [
       {
         id: "msg1",
-        content: "안녕하세요 test2님",
-        author: "test1",
-        timestamp: new Date().toISOString(),
+        message: "안녕하세요 test2님", // 필드 이름 변경
+        senderName: "test1", // 필드 이름 변경
+        roomId: "1", // 필드 추가
+        createAt: new Date().toISOString(), // 필드 추가
+        type: "CHAT", // 필드 추가
       },
       {
         id: "msg2",
-        content: "안녕하세요 test1님",
-        author: "test2",
-        timestamp: new Date().toISOString(),
+        message: "안녕하세요 test1님",
+        senderName: "test2",
+        roomId: "1",
+        createAt: new Date().toISOString(),
+        type: "CHAT",
       },
     ],
   };
@@ -262,18 +266,16 @@ export const unsubscribeFromRoom =
 
 // 메시지 전송 (WebSocket)
 export const sendMessage =
-  (chatRoomId: string, content: string, token: string) =>
+  (
+    chatRoomId: string,
+    message: Message,
+    token: string // Message 객체를 직접 받도록 수정
+  ) =>
   (dispatch: AppDispatch, getState: () => RootState & PersistPartial) => {
     try {
       const user = getState().auth.user;
       if (stompClient && stompClient.connected) {
-        sendMessageSocket(chatRoomId, content, token); // WebSocket으로 메시지 전송
-        const message: Message = {
-          id: new Date().toISOString(),
-          content,
-          author: user.name, // Redux 상태에서 유저 정보 가져오기
-          timestamp: new Date().toISOString(),
-        };
+        sendMessageSocket(chatRoomId, message, token); // WebSocket으로 메시지 전송
         dispatch(addMessageSuccess(message)); // Redux 상태 업데이트
       } else {
         dispatch(setError("WebSocket 연결이 없습니다."));

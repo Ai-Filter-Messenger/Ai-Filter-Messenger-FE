@@ -18,7 +18,6 @@ import {
   sendMessage,
   setCurrentConversation,
 } from "@/redux/slices/chat";
-import { Message } from "@/redux/slices/chat";
 import { subscribeToChatRoom } from "@/websocket/socketConnection"; // 소켓 연결 추가
 
 // ChatRoom 컴포넌트에 chatRoomId prop을 받도록 타입 추가
@@ -49,22 +48,21 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   // 메시지 전송 핸들러
   const handleSendMessage = () => {
     if (newMessage.trim() !== "" && chatRoomId) {
-      const message: Message = {
-        id: new Date().toISOString(),
-        content: newMessage,
-        author: user.name,
-        timestamp: new Date().toISOString(),
+      const message = {
+        id: new Date().toISOString(), // 클라이언트가 ID를 생성
+        message: newMessage, // 실제 메시지 내용
+        senderName: user.name, // 보낸 사람 이름
+        roomId: chatRoomId, // 방 ID
+        createAt: new Date().toISOString(), // 생성 시간
+        type: "MESSAGE", // 메시지 유형
       };
 
       console.log("Sending message:", message);
 
-      // 메시지를 전송하는 액션 호출
-      dispatch(sendMessage(chatRoomId, newMessage, user.token || ""));
+      // 서버로 메시지를 전송
+      dispatch(sendMessage(chatRoomId, message, user.token || "")); // 메시지를 전체 객체로 전달
 
-      // 현재 대화에 메시지를 추가
-      dispatch(addMessageSuccess(message));
-
-      // 메시지 전송 후 입력창 초기화
+      // 입력창 초기화
       setNewMessage("");
     }
   };
@@ -100,17 +98,17 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
       {/* 채팅 메시지 리스트 */}
       <Box sx={styles.messageContainer}>
-        {currentConversation?.messages.map((msg: Message, index) => (
+        {currentConversation?.messages.map((msg, index) => (
           <Box
             key={index}
             sx={
-              msg.author === user.name
+              msg.senderName === user.name
                 ? styles.myMessage // 로그인된 사용자의 메시지
                 : styles.theirMessage // 상대방의 메시지
             }
           >
-            <Typography>{msg.content}</Typography>
-            <Typography sx={styles.timestamp}>{msg.timestamp}</Typography>
+            <Typography>{msg.message}</Typography>
+            <Typography sx={styles.timestamp}>{msg.createAt}</Typography>
           </Box>
         ))}
       </Box>

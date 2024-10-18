@@ -197,22 +197,23 @@ const handleChatRoomMessage = (message: any, chatRoomId: string) => {
 // 채팅 메시지 전송 함수 (WebSocket 기반)
 export const sendMessage = (
   chatRoomId: string,
-  content: string,
+  message: {
+    id: string;
+    message: string;
+    senderName: string;
+    roomId: string;
+    createAt: string;
+    type: string;
+  }, // 전체 메시지 객체를 받도록 수정
   token: string
 ) => {
   if (stompClient && stompClient.connected) {
-    console.log(`Sending message to chat room ${chatRoomId}: ${content}`);
-    const message = {
-      chatRoomId,
-      content,
-      sender: store.getState().auth.user.name, // Redux store에서 유저 정보 가져오기
-      timestamp: new Date().toISOString(),
-    };
+    console.log(`Sending message to chat room ${chatRoomId}:`, message);
 
     stompClient.send(
-      `/app/chat/${chatRoomId}`,
+      `/app/chat/send`, // 메시지를 보낼 경로 수정
       { Authorization: `Bearer ${token}` },
-      JSON.stringify(message)
+      JSON.stringify(message) // 메시지 객체를 JSON 문자열로 변환하여 전송
     );
   } else {
     console.log("WebSocket이 연결되어 있지 않아 메시지를 보낼 수 없습니다."); // 로그 추가
