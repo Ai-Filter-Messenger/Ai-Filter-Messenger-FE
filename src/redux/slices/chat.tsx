@@ -222,18 +222,19 @@ export const {
 } = slice.actions;
 
 // WebSocket 연결 시작
-export const connectToChat = (token: string) => (dispatch: AppDispatch) => {
-  dispatch(setLoading(true));
-  try {
-    connectWebSocket(token); // WebSocket 연결 시작
-    toast.success("WebSocket 연결 성공");
-  } catch (error) {
-    dispatch(setError("WebSocket 연결에 실패했습니다."));
-    toast.error("WebSocket 연결에 실패했습니다.");
-  } finally {
-    dispatch(setLoading(false));
-  }
-};
+export const connectToChat =
+  (token: string, chatRoomId: string) => (dispatch: AppDispatch) => {
+    dispatch(setLoading(true));
+    try {
+      connectWebSocket(token, chatRoomId); // WebSocket 연결 시작
+      toast.success("WebSocket 연결 성공");
+    } catch (error) {
+      dispatch(setError("WebSocket 연결에 실패했습니다."));
+      toast.error("WebSocket 연결에 실패했습니다.");
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
 
 // WebSocket 연결 해제
 export const disconnectFromChat = () => (dispatch: AppDispatch) => {

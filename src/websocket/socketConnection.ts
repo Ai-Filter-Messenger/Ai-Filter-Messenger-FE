@@ -18,22 +18,23 @@ export let stompClient: CompatClient | null = null;
 let isConnected = false; // 연결 상태를 추적
 
 // WebSocket 연결 초기화 함수
-export const connectWebSocket = (token: string) => {
-  console.log("WebSocket 연결 시도...");
+export const connectWebSocket = (token: string, chatRoomId: string) => {
+  console.log("socketConnection.ts) WebSocket 연결 시도...");
   const socket = new SockJS(SOCKET_URL);
   stompClient = Stomp.over(socket);
 
   stompClient.connect(
     { Authorization: `Bearer ${token}` },
     () => {
-      console.log("WebSocket 연결 성공");
+      console.log("socketConnection.ts) WebSocket 연결 성공");
       isConnected = true; // 연결 상태 업데이트
       subscribeToPrivateMessages(token); // 유저 전용 메시지 구독
+      subscribeToChatRoom(chatRoomId); // 특정 채팅방 구독
     },
     (error: any) => {
       console.error("WebSocket 연결 실패", error);
       isConnected = false; // 연결 실패 시 상태 업데이트
-      attemptReconnect(token); // 연결 실패 시 재연결 시도
+      attemptReconnect(token, chatRoomId); // 연결 실패 시 재연결 시도
     }
   );
 };
@@ -50,10 +51,10 @@ export const disconnectWebSocket = () => {
 };
 
 // 재연결 시도 함수
-const attemptReconnect = (token: string) => {
+const attemptReconnect = (token: string, chatRoomId: string) => {
   setTimeout(() => {
     console.log("WebSocket 재연결 시도 중...");
-    connectWebSocket(token); // 재연결 시도
+    connectWebSocket(token, chatRoomId); // 재연결 시도
   }, 5000); // 5초 후 재연결 시도
 };
 
@@ -81,7 +82,7 @@ const handleIncomingMessage = (message: any) => {
   const dispatch = store.dispatch;
 
   switch (message.type) {
-    case "CHAT":
+    case "MESSAGE":
       dispatch(addMessageSuccess(message));
 
       // 현재 대화에 메시지를 추가
@@ -148,7 +149,7 @@ const handleChatRoomMessage = (message: any, chatRoomId: string) => {
   const dispatch = store.dispatch;
 
   switch (message.type) {
-    case "CHAT":
+    case "MESSAGE":
       dispatch(addMessageSuccess(message));
 
       // 현재 대화에 메시지를 추가

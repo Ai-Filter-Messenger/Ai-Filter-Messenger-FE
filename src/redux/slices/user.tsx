@@ -11,6 +11,11 @@ export interface User {
   avatarUrl: string;
 }
 
+export interface AuthState {
+  token: string | null; // Token 속성 추가
+  user: User | null; // 현재 사용자 정보
+}
+
 export interface UserState {
   users: User[];
   currentUser: User | null;
@@ -111,9 +116,10 @@ export function ProfileEdit(formValues: Record<string, any>) {
   return async (dispatch: AppDispatch, getState: () => RootState) => {
     dispatch(setLoading(true));
     try {
+      const token = getState().auth.token; // Token 가져오기
       const response = await axios.patch("/user", formValues, {
         headers: {
-          Authorization: `Bearer ${getState().auth.token}`,
+          Authorization: `Bearer ${token}`, // Token 사용
         },
       });
       dispatch(fetchUserSuccess(response.data.user));
@@ -132,16 +138,17 @@ export function UpdateNickname(newNickname: string) {
   return async (dispatch: AppDispatch, getState: () => RootState) => {
     dispatch(setLoading(true));
     try {
+      const token = getState().auth.token; // Token 가져오기
       const response = await axios.patch(
         "/user/nickname/change",
         { newNickname },
         {
           headers: {
-            Authorization: `Bearer ${getState().auth.token}`,
+            Authorization: `Bearer ${token}`, // Token 사용
           },
         }
       );
-      dispatch(fetchUserSuccess(response.data.user)); // 변경된 유저 정보를 상태에 반영
+      dispatch(fetchUserSuccess(response.data.user));
       toast.success("닉네임 변경 성공!");
     } catch (error: any) {
       dispatch(setError("닉네임 변경에 실패했습니다."));
@@ -159,18 +166,19 @@ export function UploadProfileImage(imageFile: File) {
     try {
       const formData = new FormData();
       formData.append("image", imageFile);
+      const token = getState().auth.token; // Token 가져오기
 
       const response = await axios.patch(
         "/user/profileImage/change",
         formData,
         {
           headers: {
-            Authorization: `Bearer ${getState().auth.token}`,
+            Authorization: `Bearer ${token}`, // Token 사용
             "Content-Type": "multipart/form-data",
           },
         }
       );
-      dispatch(fetchUserSuccess(response.data.user)); // 변경된 프로필 이미지 정보 반영
+      dispatch(fetchUserSuccess(response.data.user));
       toast.success("프로필 이미지 업데이트 성공!");
     } catch (error: any) {
       dispatch(setError("프로필 이미지 업데이트에 실패했습니다."));

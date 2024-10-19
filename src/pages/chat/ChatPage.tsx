@@ -14,28 +14,27 @@ import {
 } from "@/websocket/socketConnection"; // 웹소켓 연결 및 해제 함수 임포트
 
 const ChatPage = () => {
+  const { user } = useSelector((state: RootState) => state.auth);
   const { chatRoomId, loginId } = useParams<{
     chatRoomId: string;
     loginId: string;
   }>(); // URL에서 loginId와 chatRoomId 받아오기
   const dispatch = useDispatch<AppDispatch>(); // useDispatch를 AppDispatch로 타입 지정
-  const currentChatId = useSelector(
-    (state: RootState) => state.chat.currentConversation?.id
-  ); // 현재 선택된 채팅방 ID
 
   useEffect(() => {
     if (loginId) {
       dispatch(loginTestUser(loginId)); // 테스트용 로그인 처리
+
+      // 웹소켓 연결 시도
+      const token = user.token || "fake-token"; // 토큰 설정 (가짜 로그인 시 사용)
+      connectWebSocket(token, chatRoomId || ""); // 사용자 토큰과 채팅방 ID로 연결
+
+      // Cleanup function to close the socket when the component unmounts
+      return () => {
+        disconnectWebSocket(); // 웹소켓 연결 종료
+      };
     }
-
-    // 웹소켓 연결 시도
-    const socket = connectWebSocket(loginId || ""); // 로그인 ID로 연결
-
-    // Cleanup function to close the socket when the component unmounts
-    return () => {
-      disconnectWebSocket(); // 웹소켓 연결 종료
-    };
-  }, [loginId, dispatch, chatRoomId]);
+  }, [loginId, dispatch, chatRoomId, user.token]);
 
   return (
     <MainLayout

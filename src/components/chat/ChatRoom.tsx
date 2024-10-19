@@ -18,7 +18,7 @@ import {
   sendMessage,
   setCurrentConversation,
 } from "@/redux/slices/chat";
-import { subscribeToChatRoom } from "@/websocket/socketConnection"; // 소켓 연결 추가
+import { stompClient } from "@/websocket/socketConnection"; // 소켓 연결 추가
 
 // ChatRoom 컴포넌트에 chatRoomId prop을 받도록 타입 추가
 interface ChatRoomProps {
@@ -32,11 +32,21 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const [newMessage, setNewMessage] = useState<string>("");
 
   useEffect(() => {
-    if (chatRoomId) {
-      // 특정 채팅방 구독
-      subscribeToChatRoom(chatRoomId);
+    if (chatRoomId && stompClient) {
+      // WebSocket에서 메시지 수신 처리
+      stompClient.subscribe(`/topic/chatroom/${chatRoomId}`, (message) => {
+        const receivedMessage = JSON.parse(message.body);
+        console.log("Received message from server:", receivedMessage);
+
+        // UI 업데이트: Redux에 메시지 추가
+        dispatch(addMessageSuccess(receivedMessage));
+      });
+    } else {
+      console.error(
+        "ChatRoom.tsx) stompClient is null. Unable to subscribe to chatroom."
+      );
     }
-  }, [chatRoomId]);
+  }, [chatRoomId, dispatch, stompClient]);
 
   useEffect(() => {
     console.log(
@@ -49,7 +59,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const handleSendMessage = () => {
     if (newMessage.trim() !== "" && chatRoomId) {
       const message = {
-        id: new Date().toISOString(), // 클라이언트가 ID를 생성
+        id: user.id, // 클라이언트가 ID를 생성
         message: newMessage, // 실제 메시지 내용
         senderName: user.name, // 보낸 사람 이름
         roomId: chatRoomId, // 방 ID
