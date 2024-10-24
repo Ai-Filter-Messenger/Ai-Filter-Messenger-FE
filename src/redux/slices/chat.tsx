@@ -109,7 +109,17 @@ const slice = createSlice({
     addMessageSuccess(state, action: PayloadAction<Message>) {
       const conversation = state.currentConversation;
       if (conversation) {
-        conversation.messages.push(action.payload);
+        const existingMessage = conversation.messages.find(
+          (msg) => msg.id === action.payload.id
+        );
+        
+        // 중복 메시지가 없을 경우에만 추가
+        if (!existingMessage) {
+          console.log("Adding message to conversation:", action.payload);
+          conversation.messages = [...conversation.messages, action.payload];
+        } else {
+          console.log("Duplicate message detected, not adding to conversation.");
+        }
       }
     },
     addNewConversation(state, action: PayloadAction<Conversation>) {
@@ -185,6 +195,7 @@ const slice = createSlice({
 export const setTestChatRoom = () => (dispatch: AppDispatch) => {
   const conversation = {
     id: "1",
+    chatRoomId : 1,
     participants: ["test1", "test2"],
     messages: [
       {

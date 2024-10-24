@@ -32,21 +32,20 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const [newMessage, setNewMessage] = useState<string>("");
 
   useEffect(() => {
+    let subscription: any = null;
     if (chatRoomId && stompClient) {
-      // WebSocket에서 메시지 수신 처리
-      stompClient.subscribe(`/topic/chatroom/${chatRoomId}`, (message) => {
+      // 구독 설정
+      subscription = stompClient.subscribe(`/topic/chatroom/${chatRoomId}`, (message) => {
         const receivedMessage = JSON.parse(message.body);
         console.log("Received message from server:", receivedMessage);
-
-        // UI 업데이트: Redux에 메시지 추가
+  
+        // 메시지를 추가할 때, 중복 메시지 방지 로직 추가
         dispatch(addMessageSuccess(receivedMessage));
       });
     } else {
-      console.error(
-        "ChatRoom.tsx) stompClient is null. Unable to subscribe to chatroom."
-      );
+      console.error("stompClient is null or chatRoomId is missing.");
     }
-  }, [chatRoomId, dispatch, stompClient]);
+  }, [chatRoomId, stompClient]); 
 
   useEffect(() => {
     console.log(
@@ -108,20 +107,25 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
       {/* 채팅 메시지 리스트 */}
       <Box sx={styles.messageContainer}>
-        {currentConversation?.messages.map((msg, index) => (
-          <Box
-            key={index}
-            sx={
-              msg.senderName === user.name
-                ? styles.myMessage // 로그인된 사용자의 메시지
-                : styles.theirMessage // 상대방의 메시지
-            }
-          >
-            <Typography>{msg.message}</Typography>
-            <Typography sx={styles.timestamp}>{msg.createAt}</Typography>
-          </Box>
-        ))}
+  {currentConversation?.messages
+    .filter((msg, index, self) => 
+      // 메시지 id가 고유한지 확인하여 중복 제거
+      index === self.findIndex((m) => m.id === msg.id)
+    )
+    .map((msg, index) => (
+      <Box
+        key={msg.id} // 메시지의 id를 키로 사용하여 고유한 메시지로 처리
+        sx={
+          msg.senderName === user.name
+            ? styles.myMessage // 로그인된 사용자의 메시지
+            : styles.theirMessage // 상대방의 메시지
+        }
+      >
+        <Typography>{msg.message}</Typography>
+        <Typography sx={styles.timestamp}>{msg.createAt}</Typography>
       </Box>
+    ))}
+</Box>
 
       {/* 하단 - 메시지 입력창 */}
       <Box sx={styles.messageInputContainer}>
