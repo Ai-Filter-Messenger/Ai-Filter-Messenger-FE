@@ -5,7 +5,8 @@ import { AppDispatch, RootState } from "@/redux/store";
 import { NavigateFunction } from "react-router-dom";
 
 // 환경변수에서 API Base URL 가져오기
-const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:8080";
+const API_BASE_URL =
+  import.meta.env.VITE_BASE_URL || "http://localhost:8080/api";
 
 // 초기 상태 정의
 export interface AuthState {
@@ -16,6 +17,7 @@ export interface AuthState {
   isLoggedIn: boolean;
   emailVerificationCode: string | null;
   isEmailVerified: boolean;
+  foundLoginId: string | null;
 }
 
 const initialState: AuthState = {
@@ -26,6 +28,7 @@ const initialState: AuthState = {
   isLoggedIn: false,
   emailVerificationCode: null,
   isEmailVerified: false,
+  foundLoginId: null,
 };
 
 // Slice 생성
@@ -61,12 +64,8 @@ const slice = createSlice({
       state.emailVerificationCode = null;
       state.isEmailVerified = false;
     },
-    // 테스트 로그인
-    fakeLogin: (state, action: PayloadAction<string>) => {
-      state.user.loginId = action.payload;
-      state.user.name = action.payload; // 임시로 loginId를 이름으로 사용
-      state.token = "fake-token"; // 임시 토큰
-      state.isLoggedIn = true;
+    setFoundLoginId(state, action: PayloadAction<string | null>) {
+      state.foundLoginId = action.payload;
     },
   },
 });
@@ -83,7 +82,7 @@ export const {
   sendEmailVerificationSuccess,
   verifyEmailSuccess,
   resetEmailVerification,
-  fakeLogin,
+  setFoundLoginId,
 } = slice.actions;
 
 // 회원가입
@@ -92,8 +91,8 @@ export function RegisterUser(
     loginId: string;
     password: string;
     nickname: string;
-    name: string;
     email: string;
+    name: string;
   },
   navigate: NavigateFunction
 ) {
@@ -108,8 +107,8 @@ export function RegisterUser(
           loginId: formValues.loginId,
           password: formValues.password,
           nickname: formValues.nickname,
-          name: formValues.name,
           email: formValues.email,
+          name: formValues.name,
         },
         {
           headers: {
@@ -119,7 +118,7 @@ export function RegisterUser(
       );
 
       toast.success("회원가입 성공!");
-      navigate(`/auth/verify`);
+      navigate(`/auth/login`);
     } catch (error: any) {
       dispatch(setError(error?.response?.data?.message || "회원가입 실패."));
       toast.error(error?.response?.data?.message || "회원가입 실패.");
@@ -149,9 +148,14 @@ export function LoginUser(
         }
       );
 
-      dispatch(loginSuccess(response.data.token));
+      const accessToken = response.data.accessToken;
+      localStorage.setItem("accessToken", accessToken);
+
+      dispatch(loginSuccess(response.data.accessToken));
       toast.success("로그인 성공!");
-      navigate(`/chat`);
+      console.log(response.data.accessToken);
+
+      navigate(`/chat/${formValues.loginId}`);
     } catch (error: any) {
       dispatch(setError(error?.response?.data?.message || "로그인 실패."));
       toast.error(error?.response?.data?.message || "로그인 실패.");
@@ -174,51 +178,87 @@ export function LogoutUser(navigate: NavigateFunction) {
   };
 }
 
-// 테스트 유저 로그인 함수
-export const loginTestUser = (loginId: string) => (dispatch: AppDispatch) => {
-  dispatch(fakeLogin(loginId)); // 테스트용 로그인 처리
-  toast.success(`${loginId}로 로그인되었습니다!`);
-};
-
 // 아이디 중복 확인
-export function CheckLoginId(loginId: string) {
-  return async (dispatch: AppDispatch) => {
+export function CheckLoginId(loginId: string, nickname: string) {
+  return async (dispatch: AppDispatch, getState: () => RootState) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/user/check/loginId`, {
-        loginId,
-      });
-      if (response.data.isAvailable) {
+      const response = await axios.post(
+        `${API_BASE_URL}/user/check/loginId`,
+        {
+          loginId,
+          nickname,
+        },
+        { validateStatus: (status) => status === 200 || status === 400 }
+      );
+      if (response.status === 200) {
         toast.success("사용 가능한 아이디입니다.");
-      } else {
+        alert("사용 가능한 아이디입니다."); // 200 상태일 때 메시지
+      } else if (response.status === 400) {
         toast.error("이미 사용 중인 아이디입니다.");
+        alert("이미 사용 중인 아이디입니다."); // 400 상태일 때 메시지
       }
     } catch (error: any) {
       toast.error("아이디 중복 확인 실패.");
+      alert("아이디 중복 확인 실패."); // 기타 오류 발생 시 메시지
     }
   };
 }
 
 // 이메일 인증 코드 발송
-export function SendEmailVerification(email: string) {
+export function SendEmailVerification(
+  email: string,
+  state: string = "defaultState",
+  authNumber: number = 0
+) {
   return async (dispatch: AppDispatch) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/mail/send`, { email });
-      dispatch(sendEmailVerificationSuccess(response.data.code));
-      toast.success("인증 코드가 발송되었습니다.");
+      const response = await axios.post(`${API_BASE_URL}/mail/send`, {
+        email,
+        state,
+        authNumber,
+      });
+
+      if (response.status === 200) {
+        dispatch(sendEmailVerificationSuccess(response.data.code));
+        toast.success("인증 코드가 발송되었습니다.");
+        alert("메일 전송에 성공하였습니다."); // 메일 전송 성공 시 alert 메시지
+      }
     } catch (error: any) {
       toast.error("이메일 인증 코드 발송에 실패했습니다.");
+      alert("이메일 인증 코드 발송에 실패했습니다."); // 실패 시 alert 메시지
     }
   };
 }
 
 // 이메일 인증 코드 검증
-export function VerifyEmail(verificationCode: string, inputCode: string) {
+export function VerifyEmail(email: string, state: string, authNumber: number) {
   return async (dispatch: AppDispatch) => {
-    if (verificationCode === inputCode) {
-      dispatch(verifyEmailSuccess());
-      toast.success("이메일 인증이 완료되었습니다.");
-    } else {
-      toast.error("인증 코드가 올바르지 않습니다.");
+    try {
+      console.log("이메일 인증 요청:", email, state, authNumber);
+      const response = await axios.post(
+        `${API_BASE_URL}/mail/confirm`,
+        {
+          email,
+          state,
+          authNumber,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json", // 헤더에 Content-Type 명시
+          },
+        }
+      );
+
+      console.log("이메일 인증 코드 검증:", response);
+
+      if (response.status === 200) {
+        dispatch(verifyEmailSuccess());
+        toast.success("이메일 인증이 완료되었습니다.");
+      } else {
+        toast.error("이메일 인증에 실패했습니다.");
+      }
+    } catch (error: any) {
+      toast.error("이메일 인증에 실패했습니다.");
     }
   };
 }
@@ -227,10 +267,13 @@ export function VerifyEmail(verificationCode: string, inputCode: string) {
 export function FindIdByEmail(email: string, verificationCode: string) {
   return async (dispatch: AppDispatch) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/mail/check`, {
+      const response = await axios.post(`${API_BASE_URL}/user/find/loginId`, {
         email,
         verificationCode,
       });
+      const { loginId } = response.data.loginId;
+      console.log(response.data.loginId);
+      dispatch(setFoundLoginId(loginId));
       toast.success("아이디가 이메일로 전송되었습니다.");
     } catch (error: any) {
       toast.error("아이디 찾기에 실패했습니다.");

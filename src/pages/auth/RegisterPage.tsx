@@ -32,6 +32,7 @@ const RegisterPage: React.FC = () => {
   const [nickname, setNickname] = useState<string>("");
   const [authCode, setAuthCode] = useState<string>("");
   const [hidePassword, setHidePassword] = useState<boolean>(true);
+  const [emailSent, setEmailSent] = useState<boolean>(false);
 
   // useDispatch를 사용할 때 AppDispatch 타입 적용
   const dispatch = useDispatch<AppDispatch>();
@@ -43,20 +44,25 @@ const RegisterPage: React.FC = () => {
 
   // 아이디 중복 확인
   const handleCheckLoginId = () => {
-    dispatch(CheckLoginId(loginId));
+    dispatch(CheckLoginId(loginId, nickname));
   };
 
   // 이메일 인증 코드 요청
-  const handleSendCode = () => {
+  const handleSendCode = async () => {
     const email = `${emailUser}@${emailDomain}`;
-    dispatch(SendEmailVerification(email));
+    await dispatch(SendEmailVerification(email));
+    setEmailSent(true); // 이메일 발송 성공 시 emailSent 상태를 true로 설정
   };
 
   // 이메일 인증 코드 검증
   const handleVerifyCode = () => {
-    if (emailVerificationCode) {
-      dispatch(VerifyEmail(emailVerificationCode, authCode));
-    }
+    const email = `${emailUser}@${emailDomain}`; // 이메일 주소 생성
+    const authNumber = parseInt(authCode, 10); // 인증 코드를 숫자로 변환
+
+    console.log("인증 코드 검증 버튼 클릭");
+    console.log("email:", email, "authNumber:", authNumber);
+
+    dispatch(VerifyEmail(email, "confirm", authNumber)); // email, state, authNumber 전달
   };
 
   // 회원가입 처리
@@ -178,7 +184,7 @@ const RegisterPage: React.FC = () => {
       </Button>
 
       {/* 인증 코드 입력 및 검증 */}
-      {emailVerificationCode && (
+      {emailSent && ( // 이메일 발송 후에만 인증 코드 입력 필드 표시
         <>
           <TextField
             fullWidth
