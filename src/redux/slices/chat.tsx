@@ -321,7 +321,13 @@ export const setCurrentChat =
       // 해당 채팅방의 메시지를 가져옵니다.
       dispatch(fetchMessages(conversationId));
     } else {
-      dispatch(setError("채팅방을 찾을 수 없습니다."));
+      console.error("채팅방을 찾을 수 없습니다. 기본 대화방을 설정합니다.");
+      const defaultConversation = {
+        id: conversationId,
+        participants: [],
+        messages: [],
+      };
+      dispatch(setCurrentConversation(defaultConversation)); // 기본 대화 설정
     }
   };
 

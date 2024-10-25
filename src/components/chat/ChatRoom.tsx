@@ -17,6 +17,7 @@ import {
   addMessageSuccess,
   sendMessage,
   setCurrentConversation,
+  fetchMessages,
 } from "@/redux/slices/chat";
 import { stompClient } from "@/websocket/socketConnection"; // 소켓 연결 추가
 
@@ -28,8 +29,26 @@ interface ChatRoomProps {
 const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
-  const { currentConversation } = useSelector((state: RootState) => state.chat);
+  const { currentConversation, conversations } = useSelector(
+    (state: RootState) => state.chat
+  );
   const [newMessage, setNewMessage] = useState<string>("");
+
+  useEffect(() => {
+    // conversations가 있고 currentConversation이 없을 때 기본 대화 설정
+    if (!currentConversation && conversations.length > 0) {
+      const firstConversation = conversations.find(
+        (conv) => conv.id === chatRoomId
+      );
+      if (firstConversation) {
+        dispatch(setCurrentConversation(firstConversation));
+      } else {
+        console.error("No conversation found with the given chatRoomId");
+      }
+    }
+
+    console.log("currentConversation:", currentConversation);
+  }, [currentConversation, conversations, chatRoomId, dispatch]);
 
   useEffect(() => {
     let subscription: any = null;
@@ -41,14 +60,31 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
           const receivedMessage = JSON.parse(message.body);
           console.log("Received message from server:", receivedMessage);
 
-          // 메시지를 추가할 때, 중복 메시지 방지 로직 추가
-          dispatch(addMessageSuccess(receivedMessage));
+          // 메시지를 추가하고 대화 설정
+          if (currentConversation) {
+            dispatch(addMessageSuccess(receivedMessage));
+          } else {
+            // 현재 대화가 없을 경우 메시지와 함께 대화를 설정
+            const newConversation = {
+              id: chatRoomId,
+              participants: [user.name],
+              messages: [receivedMessage],
+            };
+            dispatch(setCurrentConversation(newConversation));
+          }
         }
       );
     } else {
       console.error("stompClient is null or chatRoomId is missing.");
     }
-  }, [chatRoomId, stompClient]);
+    // 구독 해제 로직 추가
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+        console.log(`Unsubscribed from chatRoom ${chatRoomId}`);
+      }
+    };
+  }, [chatRoomId, stompClient, dispatch, currentConversation, user.name]);
 
   useEffect(() => {
     console.log(
@@ -70,6 +106,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
       };
 
       console.log("Sending message:", message);
+
+      // 사용자가 입력한 메시지를 Redux 상태에 바로 추가하여 화면에 반영
+      dispatch(addMessageSuccess(message));
 
       // 서버로 메시지를 전송
       dispatch(sendMessage(chatRoomId, message, user.token || "")); // 메시지를 전체 객체로 전달

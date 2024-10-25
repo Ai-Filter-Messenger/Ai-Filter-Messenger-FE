@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:8080";
 
 // Axios 인스턴스 생성
 const axiosInstance = axios.create({
@@ -19,9 +19,13 @@ axiosInstance.interceptors.request.use(
 
     // 회원가입, 로그인, 아이디 중복 확인 API 경로에서는 Authorization 헤더를 추가하지 않도록 설정(임시)
     const nonAuthRoutes = [
-      "/user/register",
-      "/user/login",
-      "/user/check/loginId",
+      // "/api/user/register",
+      // "/api/user/check/loginId",
+      // "/api/user/check/nickname",
+      "/auth/login",
+      "/auth/register",
+      "/auth/find-id",
+      "/auth/find-password",
     ];
     if (token && !nonAuthRoutes.some((route) => config.url?.includes(route))) {
       config.headers.Authorization = `Bearer ${token}`; // Authorization 헤더에 토큰 추가
