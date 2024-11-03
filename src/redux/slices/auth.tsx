@@ -45,9 +45,13 @@ const slice = createSlice({
     fetchUserSuccess(state, action: PayloadAction<Record<string, any>>) {
       state.user = action.payload; // user 객체에 loginId를 포함한 유저 정보가 저장
     },
-    loginSuccess(state, action: PayloadAction<string>) {
+    loginSuccess(
+      state,
+      action: PayloadAction<{ token: string; user: Record<string, any> }>
+    ) {
       state.isLoggedIn = true;
-      state.token = action.payload;
+      state.token = action.payload.token;
+      state.user = action.payload.user; // 유저 정보를 상태에 저장
     },
     logoutSuccess(state) {
       state.isLoggedIn = false;
@@ -128,7 +132,7 @@ export function RegisterUser(
   };
 }
 
-// 로그인 (실제 로그인)
+// 로그인
 export function LoginUser(
   formValues: Record<string, any>,
   navigate: NavigateFunction
@@ -151,11 +155,22 @@ export function LoginUser(
       const accessToken = response.data.accessToken;
       localStorage.setItem("accessToken", accessToken);
 
-      dispatch(loginSuccess(response.data.accessToken));
+      // 유저 정보 가져오기
+      const userResponse = await axios.get(`${API_BASE_URL}/user/info`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      // dispatch(loginSuccess({ token: accessToken, user: formValues }));
+      dispatch(loginSuccess({ token: accessToken, user: userResponse.data }));
+
+      // console.log("User object in Redux:", formValues);
+      console.log("User object in Redux:", userResponse.data);
+
       toast.success("로그인 성공!");
       console.log(response.data.accessToken);
 
-      navigate(`/chat/${formValues.loginId}`);
+      // navigate(`/chat/${formValues.loginId}`);
+      navigate(`/chat/${userResponse.data.loginId}`);
     } catch (error: any) {
       dispatch(setError(error?.response?.data?.message || "로그인 실패."));
       toast.error(error?.response?.data?.message || "로그인 실패.");

@@ -13,6 +13,7 @@ import { FaCirclePlus, FaRegFaceSmile } from "react-icons/fa6";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { IoSend } from "react-icons/io5";
 import { RootState, AppDispatch } from "@/redux/store";
+import { v4 as uuidv4 } from "uuid"; // uuid 임포트
 import {
   addMessageSuccess,
   sendMessage,
@@ -77,13 +78,13 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
     } else {
       console.error("stompClient is null or chatRoomId is missing.");
     }
-    // 구독 해제 로직 추가
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-        console.log(`Unsubscribed from chatRoom ${chatRoomId}`);
-      }
-    };
+    // // 구독 해제 로직 추가
+    // return () => {
+    //   if (subscription) {
+    //     subscription.unsubscribe();
+    //     console.log(`Unsubscribed from chatRoom ${chatRoomId}`);
+    //   }
+    // };
   }, [chatRoomId, stompClient, dispatch, currentConversation, user.name]);
 
   useEffect(() => {
@@ -97,7 +98,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const handleSendMessage = () => {
     if (newMessage.trim() !== "" && chatRoomId) {
       const message = {
-        id: user.id, // 클라이언트가 ID를 생성
+        id: uuidv4(), // 고유한 UUID로 임시 ID 생성
         message: newMessage, // 실제 메시지 내용
         senderName: user.name, // 보낸 사람 이름
         roomId: chatRoomId, // 방 ID
@@ -105,7 +106,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         type: "MESSAGE", // 메시지 유형
       };
 
-      console.log("Sending message:", message);
+      console.log("Sending message to chat room", chatRoomId, message);
 
       // 사용자가 입력한 메시지를 Redux 상태에 바로 추가하여 화면에 반영
       dispatch(addMessageSuccess(message));
@@ -157,7 +158,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
           )
           .map((msg, index) => (
             <Box
-              key={msg.id} // 메시지의 id를 키로 사용하여 고유한 메시지로 처리
+              key={`${msg.id || "msg"}-${index}`} // 고유한 key 설정
               sx={
                 msg.senderName === user.name
                   ? styles.myMessage // 로그인된 사용자의 메시지

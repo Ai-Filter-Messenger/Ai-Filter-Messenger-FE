@@ -55,7 +55,7 @@ const ChatLists: React.FC = () => {
       console.log("loginId:", loginId);
       console.log("token:", token);
       try {
-        const response = await axios.get("/api/chat/find/list", {
+        const response = await axios.get("/chat/find/list", {
           headers: {
             Authorization: `Bearer ${token}`, // 인증 토큰을 헤더에 추가
           },
