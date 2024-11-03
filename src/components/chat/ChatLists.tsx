@@ -13,22 +13,28 @@ import {
   IconButton,
 } from "@mui/material";
 import { AppDispatch, RootState } from "@/redux/store";
-import { setCurrentChat } from "@/redux/slices/chat"; // 현재 채팅방 설정
+import { setCurrentChat } from "@/redux/slices/chat";
 import { FaPlus } from "react-icons/fa6";
 import axios from "@/utils/axios";
 import SearchBar from "@/components/SearchBar";
+import { stompClient } from "@/websocket/socketConnection";
 
-// ChatRoom 데이터 타입 정의
+interface UserInfo {
+  nickname: string;
+  profileImageUrl: string;
+  id: number;
+}
+
 interface ChatRoom {
-  chatRoomId: string;
+  chatRoomId: number;
   type: string;
   roomName: string;
-  users: string[];
-  profileImages: string[];
+  userInfo: UserInfo[];
   userCount: number;
-  lastMessage: string;
-  lastMessageTime: string;
-  unreadCount: number;
+  recentMessage: string;
+  createAt: string;
+  fix: boolean;
+  notificationCount: number;
 }
 
 const ChatLists: React.FC = () => {
@@ -38,70 +44,138 @@ const ChatLists: React.FC = () => {
   const [chatRoomType, setChatRoomType] = useState("GENERAL");
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
   const [friendSearch, setFriendSearch] = useState<string>("");
-  const [selectedChatRoomId, setSelectedChatRoomId] = useState<string | null>(
+  const [selectedChatRoomId, setSelectedChatRoomId] = useState<number | null>(
     null
   );
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  // useSelector를 컴포넌트 최상단에서 호출하여 state 값을 가져옴
   const loginId = useSelector((state: RootState) => state.auth.user.loginId);
   const token = useSelector((state: RootState) => state.auth.token);
 
   // 채팅방 목록을 서버에서 가져오는 함수
   useEffect(() => {
     const fetchChatRooms = async () => {
-      console.log("loginId:", loginId);
-      console.log("token:", token);
       try {
         const response = await axios.get("/chat/find/list", {
           headers: {
-            Authorization: `Bearer ${token}`, // 인증 토큰을 헤더에 추가
+            Authorization: `Bearer ${token}`,
           },
           params: { loginId },
         });
-        setChatRooms(response.data); // API에서 가져온 데이터로 상태 업데이트
-        setFilteredRooms(response.data); // 필터링된 상태도 업데이트
+        setChatRooms(response.data);
+        setFilteredRooms(response.data);
       } catch (error) {
         console.error("Failed to fetch chat rooms:", error);
       }
     };
 
     if (token && loginId) {
-      fetchChatRooms(); // token과 loginId가 존재할 때만 호출
+      fetchChatRooms();
     }
   }, [loginId, token]);
 
-  // 채팅방 클릭 시, 해당 방을 현재 방으로 설정 및 이동
-  const handleRoomClick = (chatRoomId: string) => {
+  // WebSocket을 통해 새 메시지를 수신할 때 알림 카운트를 업데이트하는 함수
+  useEffect(() => {
+    if (stompClient && stompClient.connected) {
+      const subscription = stompClient.subscribe(
+        `/queue/chatroom/${loginId}`,
+        (message) => {
+          const receivedMessage = JSON.parse(message.body);
+          const { chatRoomId } = receivedMessage;
+
+          setChatRooms((prevRooms) =>
+            prevRooms.map((room) => {
+              if (
+                room.chatRoomId === chatRoomId &&
+                room.chatRoomId !== selectedChatRoomId
+              ) {
+                return {
+                  ...room,
+                  notificationCount: room.notificationCount + 1,
+                };
+              }
+              return room;
+            })
+          );
+
+          setFilteredRooms((prevRooms) =>
+            prevRooms.map((room) => {
+              if (
+                room.chatRoomId === chatRoomId &&
+                room.chatRoomId !== selectedChatRoomId
+              ) {
+                return {
+                  ...room,
+                  notificationCount: room.notificationCount + 1,
+                };
+              }
+              return room;
+            })
+          );
+        }
+      );
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [selectedChatRoomId, loginId]);
+
+  // 채팅방 클릭 시, 해당 방을 현재 방으로 설정 및 알림 초기화 및 이동
+  const handleRoomClick = (chatRoomId: number) => {
     setSelectedChatRoomId(chatRoomId);
-    dispatch(setCurrentChat(chatRoomId)); // Redux에 현재 채팅방 설정
-    // navigate(`/chat/${chatRoomId}/${loginId}`); // 해당 채팅방 URL로 이동
-    navigate(`/chat/${loginId}/${chatRoomId}`); // 해당 채팅방 URL로 이동
-    console.log("handleRoomClick 수행, loginId:", loginId);
-    console.log("handleRoomClick 수행, chatRoomId: ", chatRoomId);
+    dispatch(setCurrentChat(chatRoomId.toString()));
+    navigate(`/chat/${loginId}/${chatRoomId}`);
+
+    // 알림 리셋 처리
+    if (stompClient && stompClient.connected) {
+      stompClient.send(
+        "/chat/reset/notification",
+        {},
+        JSON.stringify({ chatRoomId })
+      );
+
+      // 현재 선택된 채팅방에 대해서만 알림 카운트를 0으로 업데이트
+      setChatRooms((prevRooms) =>
+        prevRooms.map((room) =>
+          room.chatRoomId === chatRoomId
+            ? { ...room, notificationCount: 0 }
+            : room
+        )
+      );
+      setFilteredRooms((prevRooms) =>
+        prevRooms.map((room) =>
+          room.chatRoomId === chatRoomId
+            ? { ...room, notificationCount: 0 }
+            : room
+        )
+      );
+    }
   };
 
-  const renderProfileImages = (images: string[], userCount: number) => {
+  const renderProfileImages = (userInfo: UserInfo[], userCount: number) => {
     if (userCount === 1) {
-      return <Avatar src={images[0]} alt="Profile Image" />;
+      return <Avatar src={userInfo[0].profileImageUrl} alt="Profile Image" />;
     }
     return (
       <Box sx={styles.avatarStack}>
-        {images.map((image, index) => (
+        {userInfo.slice(0, 3).map((user, index) => (
           <Avatar
             key={index}
-            src={image}
+            src={user.profileImageUrl}
             alt={`Profile Image ${index + 1}`}
             sx={styles.avatarOverlap}
           />
         ))}
+        {userCount > 3 && (
+          <Avatar sx={styles.moreAvatar}>+{userCount - 3}</Avatar>
+        )}
       </Box>
     );
   };
 
-  // 검색어가 바뀔 때마다 필터링된 채팅방을 업데이트
   const handleSearch = (query: string) => {
     if (query === "") {
       setFilteredRooms(chatRooms);
@@ -109,8 +183,8 @@ const ChatLists: React.FC = () => {
       const filtered = chatRooms.filter(
         (room) =>
           room.roomName.toLowerCase().includes(query.toLowerCase()) ||
-          room.users.some((user) =>
-            user.toLowerCase().includes(query.toLowerCase())
+          room.userInfo.some((user) =>
+            user.nickname.toLowerCase().includes(query.toLowerCase())
           )
       );
       setFilteredRooms(filtered);
@@ -120,7 +194,7 @@ const ChatLists: React.FC = () => {
   const handleCreateRoom = async () => {
     try {
       const response = await axios.post("/api/chat/create", {
-        loginId: loginId,
+        loginId,
         roomName: "",
         nicknames: selectedFriends,
         type: chatRoomType,
@@ -129,7 +203,6 @@ const ChatLists: React.FC = () => {
       if (response.status === 200) {
         alert("Chat room created successfully!");
         setIsModalOpen(false);
-        // 채팅방 목록을 다시 불러와 업데이트
         const updatedRooms = await axios.get("/chat/find/list", {
           params: { loginId },
         });
@@ -163,7 +236,7 @@ const ChatLists: React.FC = () => {
               ? styles.selectedChatRoom
               : {}),
           }}
-          onClick={() => handleRoomClick(room.chatRoomId)} // 클릭 시 해당 채팅방 렌더링
+          onClick={() => handleRoomClick(room.chatRoomId)}
           onMouseEnter={(e) =>
             (e.currentTarget.style.backgroundColor = "#333333")
           }
@@ -173,23 +246,26 @@ const ChatLists: React.FC = () => {
           }
         >
           <Box sx={styles.profileContainer}>
-            {renderProfileImages(room.profileImages, room.userCount)}
+            {renderProfileImages(room.userInfo, room.userCount)}
           </Box>
           <Box sx={styles.chatDetails}>
             <Typography variant="body1" sx={styles.roomName}>
               {room.roomName}
             </Typography>
             <Typography variant="body2" sx={styles.lastMessage}>
-              {room.lastMessage}
+              {room.recentMessage}
             </Typography>
           </Box>
           <Box sx={styles.chatMeta}>
             <Typography variant="caption" sx={styles.messageTime}>
-              {room.lastMessageTime}
+              {new Date(room.createAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
             </Typography>
-            {room.unreadCount > 0 && (
+            {room.notificationCount > 0 && (
               <Badge
-                badgeContent={room.unreadCount}
+                badgeContent={room.notificationCount}
                 color="primary"
                 sx={styles.unreadBadge}
               />
@@ -225,7 +301,7 @@ const ChatLists: React.FC = () => {
           />
 
           <Box sx={styles.selectedFriends}>
-            {selectedFriends.map((friend) => (
+            {selectedFriends.map((friend: string) => (
               <Badge key={friend} badgeContent="x" color="error">
                 {friend}
               </Badge>
@@ -284,6 +360,9 @@ const styles = {
   avatarOverlap: {
     marginLeft: "-0.5rem",
     border: "0.125rem solid #1f1f1f",
+  },
+  moreAvatar: {
+    backgroundColor: "#666",
   },
   chatDetails: {
     flex: 1,
