@@ -224,7 +224,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
             }}
           >
             {/* 상대방의 메시지일 경우 아바타와 이름 표시 */}
-            {msg.senderName !== user.name && (
+            {msg.senderName !== user.name && (msg.type === "MESSAGE" || msg.type === "FILE") && (
               <Box sx={styles.senderInfo}>
                 <Avatar sx={styles.messageAvatar}>{msg.senderName[0]}</Avatar>
                 <Typography sx={styles.senderName}>{msg.senderName}</Typography>
