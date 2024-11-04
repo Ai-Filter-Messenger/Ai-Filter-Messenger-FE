@@ -106,15 +106,14 @@ const ChatLists: React.FC = () => {
           ? `${receivedMessage.senderName}님이 사진을 보냈습니다.`
           : receivedMessage.message;
 
-        console.log("type:", type);
-        console.log("senderName : ", receivedMessage.senderName);
-
         setChatRooms((prevRooms) => {
           return prevRooms.map((room) => {
             if (room.chatRoomId === chatRoomId) {
               return {
                 ...room,
-                notificationCount: room.notificationCount + 1,
+                notificationCount: receivedMessage.senderName === nickname
+                  ? room.notificationCount  // 유지
+                  : room.notificationCount + 1,
                 recentMessage: newRecentMessage,
                 createAt: createAt,
               };
@@ -128,7 +127,9 @@ const ChatLists: React.FC = () => {
             if (room.chatRoomId === chatRoomId) {
               return {
                 ...room,
-                notificationCount: room.notificationCount + 1,
+                notificationCount: receivedMessage.senderName === nickname
+                  ? room.notificationCount  // 유지
+                  : room.notificationCount + 1,
                 recentMessage: newRecentMessage,
                 createAt: createAt,
               };
