@@ -79,56 +79,67 @@ const ChatLists: React.FC = () => {
 
   // WebSocket을 통해 새 메시지를 수신할 때 알림 카운트를 업데이트하는 함수
   useEffect(() => {
-    if (stompClient && stompClient.connected) {
-      const subscription = stompClient.subscribe(
-        `/queue/chatroom/${nickname}`,
-        (message) => {
-          const receivedMessage = JSON.parse(message.body);
-          const chatRoomId = receivedMessage.roomId;
-          const newRecentMessage = receivedMessage.message;
+    const urlPath = window.location.pathname;
+    const pathParts = urlPath.split('/');
+    const nickname = pathParts[2];
+    const roomId = pathParts[3];
 
-          setChatRooms((prevRooms) => {
-            const updatedRooms = prevRooms.map((room) => {
-              if (
-                room.chatRoomId === chatRoomId &&
-                room.chatRoomId !== selectedChatRoomId
-              ) {
-                return {
-                  ...room,
-                  notificationCount: room.notificationCount + 1,
-                  recentMessage: newRecentMessage,
-                };
-              }
-              return room;
-            });
+    const connectStompClient = () => {
+      if (stompClient && !stompClient.connected) {
+        stompClient.connect({}, () => {
+          console.log("Stomp client connected");
+          subscribeToRoom(nickname, roomId);
+        });
+      } else if (stompClient && stompClient.connected) {
+        subscribeToRoom(nickname, roomId);
+      }
+    };
 
-            console.log("Updated chatRooms:", updatedRooms);
-            return updatedRooms;
+    const subscribeToRoom = (nickname: string, roomId: string) => {
+      if (!stompClient) return;
+      const subscription = stompClient.subscribe(`/queue/chatroom/${nickname}`, (message) => {
+        const receivedMessage = JSON.parse(message.body);
+        const chatRoomId = receivedMessage.roomId ? receivedMessage.roomId : roomId;
+        const newRecentMessage = receivedMessage.message;
+        const createAt = receivedMessage.createAt;
+
+        setChatRooms((prevRooms) => {
+          return prevRooms.map((room) => {
+            if (room.chatRoomId === chatRoomId) {
+              return {
+                ...room,
+                notificationCount: room.notificationCount + 1,
+                recentMessage: newRecentMessage,
+                createAt: createAt,
+              };
+            }
+            return room;
           });
+        });
 
-          setFilteredRooms((prevRooms) =>
-            prevRooms.map((room) => {
-              if (
-                room.chatRoomId === chatRoomId &&
-                room.chatRoomId !== selectedChatRoomId
-              ) {
-                return {
-                  ...room,
-                  notificationCount: room.notificationCount + 1,
-                  recentMessage: newRecentMessage,
-                };
-              }
-              return room;
-            })
-          );
-        }
-      );
+        setFilteredRooms((prevRooms) =>
+          prevRooms.map((room) => {
+            if (room.chatRoomId === chatRoomId) {
+              return {
+                ...room,
+                notificationCount: room.notificationCount + 1,
+                recentMessage: newRecentMessage,
+                createAt: createAt,
+              };
+            }
+            return room;
+          })
+        );
+      });
 
       return () => {
         subscription.unsubscribe();
       };
-    }
-  }, [selectedChatRoomId, loginId]);
+    };
+
+    connectStompClient();
+
+  }, [selectedChatRoomId, loginId, stompClient]);
 
   // 채팅방 클릭 시, 해당 방을 현재 방으로 설정 및 알림 초기화 및 이동
   const handleRoomClick = (chatRoomId: number) => {
