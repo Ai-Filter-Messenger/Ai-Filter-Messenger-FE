@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   Box,
@@ -25,10 +25,7 @@ import axios from "@/utils/axios";
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
-  return `${date.getHours()}:${date
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
+  return `${date.getHours()}:${date.getMinutes().toString().padStart(2, "0")}`;
 };
 
 enum MessageType {
@@ -46,7 +43,7 @@ interface Message {
   id: string;
   message: string;
   senderName: string;
-  roomId: number;
+  roomId: string;
   createAt: string; // ISO 형식의 문자열로 ZonedDateTime을 표현
 }
 
@@ -63,6 +60,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const [newMessage, setNewMessage] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const token = useSelector((state: RootState) => state.auth.token);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!currentConversation && conversations.length > 0) {
@@ -137,6 +135,56 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
     }
   };
 
+  const handleFileUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      const formData = new FormData();
+      formData.append("roomId", chatRoomId || "");
+      formData.append("loginId", user.name);
+
+      for (const file of files) {
+        formData.append("files", file);
+      }
+
+      try {
+        const response = await axios.post("/file/upload", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`, // 인증 토큰 추가
+          },
+        });
+        if (response.status === 200) {
+          console.log("파일 업로드 성공");
+          alert("파일 업로드 성공");
+
+          // 업로드한 파일을 메시지로 표시
+          const result = response.data;
+          const message: Message = {
+            id: uuidv4(),
+            message: result,
+            senderName: user.name,
+            roomId: chatRoomId as string,
+            createAt: new Date().toISOString(),
+            type: MessageType.FILE,
+          };
+          dispatch(addMessageSuccess(message));
+        } else {
+          console.error("파일 업로드 실패");
+          alert("파일 업로드 실패");
+        }
+      } catch (error) {
+        console.error("파일 업로드 오류:", error);
+        alert("파일 업로드 오류");
+      }
+    }
+  };
+
   if (!chatRoomId) {
     return <Typography>채팅방이 선택되지 않았습니다.</Typography>;
   }
@@ -186,27 +234,39 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
               sx={{
                 ...styles.messageBox,
                 backgroundColor:
-                  msg.type !== "MESSAGE" && msg.type !== "FILE" ?
-                    "#9669ad" : (msg.senderName === user.name ? "#615ef1" : "#3b4654"),
+                  msg.type !== "MESSAGE" && msg.type !== "FILE"
+                    ? "#9669ad"
+                    : msg.senderName === user.name
+                      ? "#615ef1"
+                      : "#3b4654",
                 alignSelf:
-                  msg.type !== "MESSAGE" && msg.type !== "FILE" ?
-                    "center" : (msg.senderName === user.name ? "flex-end" : "flex-start"),
-                margin: msg.type !== "MESSAGE" && msg.type !== "FILE" ? "0 auto" : "",
+                  msg.type !== "MESSAGE" && msg.type !== "FILE"
+                    ? "center"
+                    : msg.senderName === user.name
+                      ? "flex-end"
+                      : "flex-start",
+                margin:
+                  msg.type !== "MESSAGE" && msg.type !== "FILE" ? "0 auto" : "",
               }}
             >
-              {/* 메시지가 파일(URL)인 경우와 텍스트인 경우를 구분 */}
               {msg.type === "FILE" ? (
                 <img
                   src={msg.message}
                   alt="Uploaded file"
-                  style={{ maxWidth: "400px", maxHeight: "300px", borderRadius: "8px" }}
+                  style={{
+                    maxWidth: "400px",
+                    maxHeight: "300px",
+                    borderRadius: "8px",
+                  }}
                 />
               ) : (
                 <Typography sx={styles.messageText}>{msg.message}</Typography>
               )}
             </Box>
             {(msg.type === "MESSAGE" || msg.type === "FILE") && (
-              <Typography sx={styles.timestamp}>{formatDate(msg.createAt)}</Typography>
+              <Typography sx={styles.timestamp}>
+                {formatDate(msg.createAt)}
+              </Typography>
             )}
           </Box>
         ))}
@@ -214,6 +274,13 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
       {/* 하단 - 메시지 입력창 */}
       <Box sx={styles.messageInputContainer}>
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={onFileChange}
+          multiple
+        />
         <TextField
           fullWidth
           variant="outlined"
@@ -224,7 +291,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <IconButton sx={styles.inputIcon}>
+                <IconButton sx={styles.inputIcon} onClick={handleFileUpload}>
                   <FaCirclePlus color="#fff" />
                 </IconButton>
                 <IconButton sx={styles.inputIcon}>
