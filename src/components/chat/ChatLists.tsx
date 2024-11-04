@@ -100,8 +100,14 @@ const ChatLists: React.FC = () => {
       const subscription = stompClient.subscribe(`/queue/chatroom/${nickname}`, (message) => {
         const receivedMessage = JSON.parse(message.body);
         const chatRoomId = receivedMessage.roomId ? receivedMessage.roomId : roomId;
-        const newRecentMessage = receivedMessage.message;
         const createAt = receivedMessage.createAt;
+        const type = receivedMessage.type;
+        const newRecentMessage = type === "FILE"
+          ? `${receivedMessage.senderName}님이 사진을 보냈습니다.`
+          : receivedMessage.message;
+
+        console.log("type:", type);
+        console.log("senderName : ", receivedMessage.senderName);
 
         setChatRooms((prevRooms) => {
           return prevRooms.map((room) => {
