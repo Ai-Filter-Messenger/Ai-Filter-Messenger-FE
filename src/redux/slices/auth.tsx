@@ -153,7 +153,9 @@ export function LoginUser(
       );
 
       const accessToken = response.data.accessToken;
+      const nickname = response.data.nickname;
       localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("nickname", nickname);
 
       // 유저 정보 가져오기
       const userResponse = await axios.get(`${API_BASE_URL}/user/info`, {

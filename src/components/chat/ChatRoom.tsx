@@ -21,14 +21,34 @@ import {
   fetchMessages,
 } from "@/redux/slices/chat";
 import { stompClient } from "@/websocket/socketConnection";
+import axios from "@/utils/axios";
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
-  return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date
+  return `${date.getHours()}:${date
     .getMinutes()
     .toString()
     .padStart(2, "0")}`;
 };
+
+enum MessageType {
+  CHAT = "CHAT",
+  JOIN = "JOIN",
+  LEAVE = "LEAVE",
+  INVITE = "INVITE",
+  FILE = "FILE",
+  MESSAGE = "MESSAGE",
+}
+
+// Message 인터페이스
+interface Message {
+  type: MessageType;
+  id: string;
+  message: string;
+  senderName: string;
+  roomId: number;
+  createAt: string; // ISO 형식의 문자열로 ZonedDateTime을 표현
+}
 
 interface ChatRoomProps {
   chatRoomId: string | undefined;
@@ -41,6 +61,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
     (state: RootState) => state.chat
   );
   const [newMessage, setNewMessage] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const token = useSelector((state: RootState) => state.auth.token);
 
   useEffect(() => {
     if (!currentConversation && conversations.length > 0) {
@@ -54,26 +76,50 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   }, [currentConversation, conversations, chatRoomId, dispatch]);
 
   useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const response = await axios.get("/chat/find/message", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: { chatRoomId },
+        });
+        console.log(response.data);
+        setMessages(response.data.reverse());
+      } catch (error) {
+        console.error("Failed to fetch chat rooms:", error);
+      }
+    };
+
+    fetchMessages();
     let subscription: any = null;
-    if (chatRoomId && stompClient) {
-      subscription = stompClient.subscribe(
-        `/topic/chatroom/${chatRoomId}`,
-        (message) => {
-          const receivedMessage = JSON.parse(message.body);
-          if (currentConversation) {
-            dispatch(addMessageSuccess(receivedMessage));
-          } else {
-            const newConversation = {
-              id: chatRoomId,
-              participants: [user.name],
-              messages: [receivedMessage],
-            };
-            dispatch(setCurrentConversation(newConversation));
+    const subscribeToChat = () => {
+      if (stompClient && stompClient.connected) {
+        subscription = stompClient.subscribe(
+          `/topic/chatroom/${chatRoomId}`,
+          (message) => {
+            const receivedMessage = JSON.parse(message.body);
+            console.log(receivedMessage);
+            // 새 메시지를 기존 메시지 배열에 추가
+            setMessages((prevMessages) => [...prevMessages, receivedMessage]);
           }
-        }
-      );
+        );
+      } else {
+        console.error("STOMP 클라이언트가 연결되지 않았습니다.");
+      }
+    };
+
+    // 초기 연결이 되지 않았으면, 연결 이벤트가 완료된 후 구독 시도
+    if (stompClient && !stompClient.connected) {
+      stompClient.connect({}, subscribeToChat);
+    } else {
+      subscribeToChat();
     }
-  }, [chatRoomId, stompClient, dispatch, currentConversation, user.name]);
+
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
+  }, [chatRoomId, stompClient]);
 
   const handleSendMessage = () => {
     if (newMessage.trim() !== "" && chatRoomId) {
@@ -120,7 +166,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
       {/* 채팅 메시지 리스트 */}
       <Box sx={styles.messageContainer}>
-        {currentConversation?.messages.map((msg, index) => (
+        {messages?.map((msg, index) => (
           <Box
             key={msg.id}
             sx={{
@@ -140,16 +186,28 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
               sx={{
                 ...styles.messageBox,
                 backgroundColor:
-                  msg.senderName === user.name ? "#4e4ef7" : "#2c2c2c",
+                  msg.type !== "MESSAGE" && msg.type !== "FILE" ?
+                    "#9669ad" : (msg.senderName === user.name ? "#615ef1" : "#3b4654"),
                 alignSelf:
-                  msg.senderName === user.name ? "flex-end" : "flex-start",
+                  msg.type !== "MESSAGE" && msg.type !== "FILE" ?
+                    "center" : (msg.senderName === user.name ? "flex-end" : "flex-start"),
+                margin: msg.type !== "MESSAGE" && msg.type !== "FILE" ? "0 auto" : "",
               }}
             >
-              <Typography sx={styles.messageText}>{msg.message}</Typography>
-              <Typography sx={styles.timestamp}>
-                {formatDate(msg.createAt)}
-              </Typography>
+              {/* 메시지가 파일(URL)인 경우와 텍스트인 경우를 구분 */}
+              {msg.type === "FILE" ? (
+                <img
+                  src={msg.message}
+                  alt="Uploaded file"
+                  style={{ maxWidth: "400px", maxHeight: "300px", borderRadius: "8px" }}
+                />
+              ) : (
+                <Typography sx={styles.messageText}>{msg.message}</Typography>
+              )}
             </Box>
+            {(msg.type === "MESSAGE" || msg.type === "FILE") && (
+              <Typography sx={styles.timestamp}>{formatDate(msg.createAt)}</Typography>
+            )}
           </Box>
         ))}
       </Box>
@@ -267,6 +325,8 @@ const styles = {
     color: "#b0b0b0",
     marginTop: "0.25rem",
     alignSelf: "flex-end",
+    marginRight: "0.5rem",
+    marginLeft: "0.5rem",
   },
   messageInputContainer: {
     display: "flex",

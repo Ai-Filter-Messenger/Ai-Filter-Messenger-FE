@@ -53,6 +53,7 @@ const ChatLists: React.FC = () => {
 
   const loginId = useSelector((state: RootState) => state.auth.user.loginId);
   const token = useSelector((state: RootState) => state.auth.token);
+  const nickname = localStorage.getItem("nickname");
 
   // 채팅방 목록을 서버에서 가져오는 함수
   useEffect(() => {
@@ -80,13 +81,14 @@ const ChatLists: React.FC = () => {
   useEffect(() => {
     if (stompClient && stompClient.connected) {
       const subscription = stompClient.subscribe(
-        `/queue/chatroom/${loginId}`,
+        `/queue/chatroom/${nickname}`,
         (message) => {
           const receivedMessage = JSON.parse(message.body);
-          const { chatRoomId } = receivedMessage;
+          const chatRoomId = receivedMessage.roomId;
+          const newRecentMessage = receivedMessage.message;
 
-          setChatRooms((prevRooms) =>
-            prevRooms.map((room) => {
+          setChatRooms((prevRooms) => {
+            const updatedRooms = prevRooms.map((room) => {
               if (
                 room.chatRoomId === chatRoomId &&
                 room.chatRoomId !== selectedChatRoomId
@@ -94,11 +96,15 @@ const ChatLists: React.FC = () => {
                 return {
                   ...room,
                   notificationCount: room.notificationCount + 1,
+                  recentMessage: newRecentMessage,
                 };
               }
               return room;
-            })
-          );
+            });
+
+            console.log("Updated chatRooms:", updatedRooms);
+            return updatedRooms;
+          });
 
           setFilteredRooms((prevRooms) =>
             prevRooms.map((room) => {
@@ -109,6 +115,7 @@ const ChatLists: React.FC = () => {
                 return {
                   ...room,
                   notificationCount: room.notificationCount + 1,
+                  recentMessage: newRecentMessage,
                 };
               }
               return room;
@@ -131,11 +138,21 @@ const ChatLists: React.FC = () => {
 
     // 알림 리셋 처리
     if (stompClient && stompClient.connected) {
-      stompClient.send(
-        "/chat/reset/notification",
-        {},
-        JSON.stringify({ chatRoomId })
-      );
+      const urlPath = window.location.pathname;
+      const pathParts = urlPath.split('/');
+
+      const nickname = pathParts[2];
+      const roomId = pathParts[3];
+
+      if (roomId && nickname) {
+        stompClient.send(
+          "/app/chat/reset/notification",
+          {},
+          JSON.stringify({ roomId: roomId, nickname: nickname })
+        );
+      } else {
+        console.error("Invalid roomId or nickname:", roomId, nickname);
+      }
 
       // 현재 선택된 채팅방에 대해서만 알림 카운트를 0으로 업데이트
       setChatRooms((prevRooms) =>
@@ -227,7 +244,7 @@ const ChatLists: React.FC = () => {
 
       <SearchBar onSearch={handleSearch} />
 
-      {filteredRooms.map((room) => (
+      {chatRooms.map((room) => (
         <Box
           key={room.chatRoomId}
           sx={{
@@ -241,8 +258,8 @@ const ChatLists: React.FC = () => {
             (e.currentTarget.style.backgroundColor = "#333333")
           }
           onMouseLeave={(e) =>
-            (e.currentTarget.style.backgroundColor =
-              selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
+          (e.currentTarget.style.backgroundColor =
+            selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
           }
         >
           <Box sx={styles.profileContainer}>
@@ -251,6 +268,7 @@ const ChatLists: React.FC = () => {
           <Box sx={styles.chatDetails}>
             <Typography variant="body1" sx={styles.roomName}>
               {room.roomName}
+              ({room.userCount})
             </Typography>
             <Typography variant="body2" sx={styles.lastMessage}>
               {room.recentMessage}

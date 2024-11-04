@@ -22,13 +22,14 @@ export const connectWebSocket = (token: string, chatRoomId: string) => {
   console.log("socketConnection.ts) WebSocket 연결 시도...");
   const socket = new SockJS(SOCKET_URL);
   stompClient = Stomp.over(socket);
+  const nickname = localStorage.getItem("nickname");
 
   stompClient.connect(
     { Authorization: `Bearer ${token}` },
     () => {
       console.log("socketConnection.ts) WebSocket 연결 성공");
       isConnected = true; // 연결 상태 업데이트
-      subscribeToPrivateMessages(token); // 유저 전용 메시지 구독
+      subscribeToPrivateMessages(token, nickname); // 유저 전용 메시지 구독
       subscribeToChatRoom(chatRoomId); // 특정 채팅방 구독
     },
     (error: any) => {
@@ -59,9 +60,9 @@ const attemptReconnect = (token: string, chatRoomId: string) => {
 };
 
 // 유저 전용 메시지 구독
-const subscribeToPrivateMessages = (token: string) => {
+const subscribeToPrivateMessages = (token: string , nickname : string | null) => {
   if (stompClient) {
-    stompClient.subscribe(`/user/queue/messages`, (message) => {
+    stompClient.subscribe(`/queue/chatroom/${nickname}`, (message) => {
       handleIncomingMessage(JSON.parse(message.body));
     });
   }

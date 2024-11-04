@@ -275,21 +275,21 @@ export const sendMessage =
     message: Message,
     token: string // Message 객체를 직접 받도록 수정
   ) =>
-  (dispatch: AppDispatch, getState: () => RootState & PersistPartial) => {
-    try {
-      const user = getState().auth.user;
-      if (stompClient && stompClient.connected) {
-        sendMessageSocket(chatRoomId, message, token); // WebSocket으로 메시지 전송
-        dispatch(addMessageSuccess(message)); // Redux 상태 업데이트
-      } else {
-        dispatch(setError("WebSocket 연결이 없습니다."));
-        toast.error("WebSocket 연결이 없습니다.");
+    (dispatch: AppDispatch, getState: () => RootState & PersistPartial) => {
+      try {
+        const user = getState().auth.user;
+        if (stompClient && stompClient.connected) {
+          sendMessageSocket(chatRoomId, message, token); // WebSocket으로 메시지 전송
+          dispatch(addMessageSuccess(message)); // Redux 상태 업데이트
+        } else {
+          dispatch(setError("WebSocket 연결이 없습니다."));
+          toast.error("WebSocket 연결이 없습니다.");
+        }
+      } catch (error) {
+        dispatch(setError("메시지를 보내는 데 실패했습니다."));
+        toast.error("메시지를 보내는 데 실패했습니다.");
       }
-    } catch (error) {
-      dispatch(setError("메시지를 보내는 데 실패했습니다."));
-      toast.error("메시지를 보내는 데 실패했습니다.");
-    }
-  };
+    };
 
 // 타이핑 상태 업데이트
 export const sendTypingStatus =
@@ -300,25 +300,25 @@ export const sendTypingStatus =
 // 현재 채팅방 설정 및 메시지 로드
 export const setCurrentChat =
   (conversationId: string) =>
-  (dispatch: AppDispatch, getState: () => RootState & PersistPartial) => {
-    const state = getState();
-    const conversation = state.chat.conversations.find(
-      (conv: { id: string }) => conv.id === conversationId
-    );
+    (dispatch: AppDispatch, getState: () => RootState & PersistPartial) => {
+      const state = getState();
+      const conversation = state.chat.conversations.find(
+        (conv: { id: string }) => conv.id === conversationId
+      );
 
-    if (conversation) {
-      dispatch(setCurrentConversation(conversation));
-      // 해당 채팅방의 메시지를 가져옵니다.
-      dispatch(fetchMessages(conversationId));
-    } else {
-      console.error("채팅방을 찾을 수 없습니다. 기본 대화방을 설정합니다.");
-      const defaultConversation = {
-        id: conversationId,
-        participants: [],
-        messages: [],
-      };
-      dispatch(setCurrentConversation(defaultConversation)); // 기본 대화 설정
-    }
-  };
+      if (conversation) {
+        dispatch(setCurrentConversation(conversation));
+        // 해당 채팅방의 메시지를 가져옵니다.
+        dispatch(fetchMessages(conversationId));
+      } else {
+        console.error("채팅방을 찾을 수 없습니다. 기본 대화방을 설정합니다.");
+        const defaultConversation = {
+          id: conversationId,
+          participants: [],
+          messages: [],
+        };
+        dispatch(setCurrentConversation(defaultConversation)); // 기본 대화 설정
+      }
+    };
 
 export default slice.reducer;
