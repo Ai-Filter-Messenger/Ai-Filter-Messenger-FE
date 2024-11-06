@@ -207,25 +207,71 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                 msg.senderName === user.name ? "row-reverse" : "row",
             }}
           >
-            {msg.senderName !== user.name ? (
-              <Box sx={styles.senderInfo}>
-                <Avatar
-                  sx={styles.messageAvatar}
-                  src={getUserAvatar(msg.senderName)}
-                  alt={msg.senderName}
-                />
-                <Box sx={styles.senderDetails}>
-                  <Typography sx={styles.senderName}>
-                    {msg.senderName}
-                  </Typography>
+            {/* 시스템 메시지 구분 처리 */}
+            {msg.type !== MessageType.MESSAGE &&
+            msg.type !== MessageType.FILE ? (
+              <Box
+                sx={{
+                  ...styles.systemMessage,
+                  alignSelf: "center",
+                  backgroundColor: "#444",
+                  borderRadius: "1rem",
+                  padding: "0.5rem 1rem",
+                  color: "#fff",
+                  fontSize: "0.8rem",
+                }}
+              >
+                <Typography>{msg.message}</Typography>
+              </Box>
+            ) : (
+              <>
+                {msg.senderName !== user.name ? (
+                  <Box sx={styles.senderInfo}>
+                    <Avatar
+                      sx={styles.messageAvatar}
+                      src={getUserAvatar(msg.senderName)}
+                      alt={msg.senderName}
+                    />
+                    <Box sx={styles.senderDetails}>
+                      <Typography sx={styles.senderName}>
+                        {msg.senderName}
+                      </Typography>
+                      <Box
+                        sx={{
+                          ...styles.messageBox,
+                          maxWidth:
+                            msg.message.length > 20 ? "60%" : "fit-content",
+                          backgroundColor: "#3b4654",
+                        }}
+                      >
+                        {msg.type === MessageType.FILE ? (
+                          <img
+                            src={msg.message}
+                            alt="Uploaded file"
+                            style={{
+                              maxWidth: "400px",
+                              maxHeight: "300px",
+                              borderRadius: "8px",
+                            }}
+                          />
+                        ) : (
+                          <Typography sx={styles.messageText}>
+                            {msg.message}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  </Box>
+                ) : (
                   <Box
                     sx={{
                       ...styles.messageBox,
                       maxWidth: msg.message.length > 20 ? "60%" : "fit-content",
-                      backgroundColor: "#3b4654",
+                      backgroundColor: "#615ef1",
+                      alignSelf: "flex-end",
                     }}
                   >
-                    {msg.type === "FILE" ? (
+                    {msg.type === MessageType.FILE ? (
                       <img
                         src={msg.message}
                         alt="Uploaded file"
@@ -241,35 +287,16 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                       </Typography>
                     )}
                   </Box>
-                </Box>
-              </Box>
-            ) : (
-              <Box
-                sx={{
-                  ...styles.messageBox,
-                  maxWidth: msg.message.length > 20 ? "60%" : "fit-content",
-                  backgroundColor: "#615ef1",
-                  alignSelf: "flex-end",
-                }}
-              >
-                {msg.type === "FILE" ? (
-                  <img
-                    src={msg.message}
-                    alt="Uploaded file"
-                    style={{
-                      maxWidth: "400px",
-                      maxHeight: "300px",
-                      borderRadius: "8px",
-                    }}
-                  />
-                ) : (
-                  <Typography sx={styles.messageText}>{msg.message}</Typography>
                 )}
-              </Box>
+                {/* 타임스탬프 표시: 시스템 메시지가 아닌 경우에만 표시 */}
+                {msg.type === MessageType.MESSAGE ||
+                msg.type === MessageType.FILE ? (
+                  <Typography sx={styles.timestamp}>
+                    {formatDate(msg.createAt)}
+                  </Typography>
+                ) : null}
+              </>
             )}
-            <Typography sx={styles.timestamp}>
-              {formatDate(msg.createAt)}
-            </Typography>
           </Box>
         ))}
       </Box>
@@ -373,7 +400,7 @@ const styles = {
   messageAvatar: {
     width: "40px",
     height: "40px",
-    marginRight: "0.5rem",
+    marginRight: "0.7rem",
   },
   senderName: {
     fontSize: "0.9rem",
@@ -386,6 +413,7 @@ const styles = {
     maxWidth: "70%",
     borderRadius: "1rem",
     padding: "0.5rem 1rem",
+    marginBottom: "0.5rem",
   },
   messageText: {
     color: "#fff",
@@ -427,6 +455,15 @@ const styles = {
     padding: "0.5rem",
     marginLeft: "0.5rem",
     fontSize: "1.1rem",
+  },
+  systemMessage: {
+    textAlign: "center",
+    fontSize: "0.8rem",
+    color: "#ffffff",
+    backgroundColor: "#444",
+    padding: "0.3rem 1rem",
+    borderRadius: "12px",
+    margin: "0.5rem auto",
   },
 };
 
