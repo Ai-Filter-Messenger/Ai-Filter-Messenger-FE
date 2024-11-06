@@ -66,6 +66,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const location = useLocation();
   const roomName = location.state?.roomName || "채팅방";
   const userInfo = location.state?.userInfo || []; // 각 유저 정보 가져오기
+  const messageContainerRef = useRef<HTMLDivElement>(null); // 메시지 컨테이너 참조 추가
 
   const getUserAvatar = (senderName: string) => {
     const user = userInfo.find((u: UserInfo) => u.nickname === senderName);
@@ -111,6 +112,18 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
       subscribeToChat();
     }
   }, [chatRoomId, token]);
+
+  // 메시지가 업데이트될 때마다 자동 스크롤
+  const scrollToBottom = () => {
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollTop =
+        messageContainerRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleSendMessage = () => {
     if (newMessage.trim() !== "" && chatRoomId) {
@@ -197,7 +210,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         </Box>
       </Box>
 
-      <Box sx={styles.messageContainer}>
+      <Box sx={styles.messageContainer} ref={messageContainerRef}>
         {messages?.map((msg) => (
           <Box
             key={msg.id}
@@ -248,6 +261,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                           <img
                             src={msg.message}
                             alt="Uploaded file"
+                            onLoad={scrollToBottom}
                             style={{
                               maxWidth: "400px",
                               maxHeight: "300px",
@@ -275,6 +289,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                       <img
                         src={msg.message}
                         alt="Uploaded file"
+                        onLoad={scrollToBottom}
                         style={{
                           maxWidth: "400px",
                           maxHeight: "300px",
