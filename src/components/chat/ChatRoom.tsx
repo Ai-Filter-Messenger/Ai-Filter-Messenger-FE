@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useLocation } from "react-router-dom"; // useLocation 추가
+import { useLocation } from "react-router-dom";
 import {
   Box,
   IconButton,
@@ -19,7 +19,6 @@ import {
   addMessageSuccess,
   sendMessage,
   setCurrentConversation,
-  fetchMessages,
 } from "@/redux/slices/chat";
 import { stompClient } from "@/websocket/socketConnection";
 import axios from "@/utils/axios";
@@ -38,14 +37,19 @@ enum MessageType {
   MESSAGE = "MESSAGE",
 }
 
-// Message 인터페이스
 interface Message {
   type: MessageType;
   id: string;
   message: string;
   senderName: string;
   roomId: string;
-  createAt: string; // ISO 형식의 문자열로 ZonedDateTime을 표현
+  createAt: string;
+}
+
+interface UserInfo {
+  nickname: string;
+  profileImageUrl: string;
+  id: number;
 }
 
 interface ChatRoomProps {
@@ -55,27 +59,18 @@ interface ChatRoomProps {
 const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
-  const { currentConversation, conversations } = useSelector(
-    (state: RootState) => state.chat
-  );
   const [newMessage, setNewMessage] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const token = useSelector((state: RootState) => state.auth.token);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
-  const roomName = location.state?.roomName || "채팅방"; // roomName 가져오기
-  console.log("Received roomName in ChatRoom:", roomName); // ChatRoom에서 받은 roomName을 로그로 확인
+  const roomName = location.state?.roomName || "채팅방";
+  const userInfo = location.state?.userInfo || []; // 각 유저 정보 가져오기
 
-  useEffect(() => {
-    if (!currentConversation && conversations.length > 0) {
-      const firstConversation = conversations.find(
-        (conv) => conv.id === chatRoomId
-      );
-      if (firstConversation) {
-        dispatch(setCurrentConversation(firstConversation));
-      }
-    }
-  }, [currentConversation, conversations, chatRoomId, dispatch]);
+  const getUserAvatar = (senderName: string) => {
+    const user = userInfo.find((u: UserInfo) => u.nickname === senderName);
+    return user?.profileImageUrl || ""; // 프로필 이미지 URL 반환
+  };
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -86,42 +81,36 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
           },
           params: { chatRoomId },
         });
-        console.log(response.data);
         setMessages(response.data.reverse());
       } catch (error) {
-        console.error("Failed to fetch chat rooms:", error);
+        console.error("Failed to fetch messages:", error);
       }
     };
 
     fetchMessages();
-    let subscription: any = null;
+
     const subscribeToChat = () => {
-      if (stompClient && stompClient.connected) {
-        subscription = stompClient.subscribe(
-          `/topic/chatroom/${chatRoomId}`,
-          (message) => {
-            const receivedMessage = JSON.parse(message.body);
-            console.log(receivedMessage);
-            // 새 메시지를 기존 메시지 배열에 추가
-            setMessages((prevMessages) => [...prevMessages, receivedMessage]);
-          }
-        );
-      } else {
-        console.error("STOMP 클라이언트가 연결되지 않았습니다.");
-      }
+      const subscription = stompClient?.subscribe(
+        `/topic/chatroom/${chatRoomId}`,
+        (message) => {
+          const receivedMessage: Message = {
+            ...JSON.parse(message.body),
+            type: MessageType[
+              JSON.parse(message.body).type as keyof typeof MessageType
+            ], // Type casting
+          };
+          setMessages((prevMessages) => [...prevMessages, receivedMessage]);
+        }
+      );
+      return () => subscription?.unsubscribe();
     };
 
-    // 초기 연결이 되지 않았으면, 연결 이벤트가 완료된 후 구독 시도
     if (stompClient && !stompClient.connected) {
       stompClient.connect({}, subscribeToChat);
     } else {
       subscribeToChat();
     }
-
-    return () => {
-      if (subscription) subscription.unsubscribe();
-    };
-  }, [chatRoomId, stompClient]);
+  }, [chatRoomId, token]);
 
   const handleSendMessage = () => {
     if (newMessage.trim() !== "" && chatRoomId) {
@@ -131,10 +120,11 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         senderName: user.name,
         roomId: chatRoomId,
         createAt: new Date().toISOString(),
-        type: "MESSAGE",
+        type: MessageType.MESSAGE,
       };
       dispatch(addMessageSuccess(message));
       dispatch(sendMessage(chatRoomId, message, user.token || ""));
+      setMessages((prevMessages) => [...prevMessages, message]); // 새로고침 없이 파일 메시지 추가
       setNewMessage("");
     }
   };
@@ -160,14 +150,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         const response = await axios.post("/file/upload", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`, // 인증 토큰 추가
+            Authorization: `Bearer ${token}`,
           },
         });
         if (response.status === 200) {
-          console.log("파일 업로드 성공");
-          alert("파일 업로드 성공");
-
-          // 업로드한 파일을 메시지로 표시
           const result = response.data;
           const message: Message = {
             id: uuidv4(),
@@ -178,13 +164,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
             type: MessageType.FILE,
           };
           dispatch(addMessageSuccess(message));
+          setMessages((prevMessages) => [...prevMessages, message]);
         } else {
-          console.error("파일 업로드 실패");
-          alert("파일 업로드 실패");
+          console.error("File upload failed");
         }
       } catch (error) {
-        console.error("파일 업로드 오류:", error);
-        alert("파일 업로드 오류");
+        console.error("File upload error:", error);
       }
     }
   };
@@ -195,7 +180,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
   return (
     <Box sx={styles.container}>
-      {/* 상단 - 채팅방 제목과 참여자 목록 */}
       <Box sx={styles.topBar}>
         <Typography variant="h6" sx={{ color: "#fff" }}>
           {roomName}
@@ -213,9 +197,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         </Box>
       </Box>
 
-      {/* 채팅 메시지 리스트 */}
       <Box sx={styles.messageContainer}>
-        {messages?.map((msg, index) => (
+        {messages?.map((msg) => (
           <Box
             key={msg.id}
             sx={{
@@ -224,59 +207,73 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                 msg.senderName === user.name ? "row-reverse" : "row",
             }}
           >
-            {/* 상대방의 메시지일 경우 아바타와 이름 표시 */}
-            {msg.senderName !== user.name &&
-              (msg.type === "MESSAGE" || msg.type === "FILE") && (
-                <Box sx={styles.senderInfo}>
-                  <Avatar sx={styles.messageAvatar}>{msg.senderName[0]}</Avatar>
+            {msg.senderName !== user.name ? (
+              <Box sx={styles.senderInfo}>
+                <Avatar
+                  sx={styles.messageAvatar}
+                  src={getUserAvatar(msg.senderName)}
+                  alt={msg.senderName}
+                />
+                <Box sx={styles.senderDetails}>
                   <Typography sx={styles.senderName}>
                     {msg.senderName}
                   </Typography>
+                  <Box
+                    sx={{
+                      ...styles.messageBox,
+                      maxWidth: msg.message.length > 20 ? "60%" : "fit-content",
+                      backgroundColor: "#3b4654",
+                    }}
+                  >
+                    {msg.type === "FILE" ? (
+                      <img
+                        src={msg.message}
+                        alt="Uploaded file"
+                        style={{
+                          maxWidth: "400px",
+                          maxHeight: "300px",
+                          borderRadius: "8px",
+                        }}
+                      />
+                    ) : (
+                      <Typography sx={styles.messageText}>
+                        {msg.message}
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
-              )}
-            <Box
-              sx={{
-                ...styles.messageBox,
-                backgroundColor:
-                  msg.type !== "MESSAGE" && msg.type !== "FILE"
-                    ? "#9669ad"
-                    : msg.senderName === user.name
-                      ? "#615ef1"
-                      : "#3b4654",
-                alignSelf:
-                  msg.type !== "MESSAGE" && msg.type !== "FILE"
-                    ? "center"
-                    : msg.senderName === user.name
-                      ? "flex-end"
-                      : "flex-start",
-                margin:
-                  msg.type !== "MESSAGE" && msg.type !== "FILE" ? "0 auto" : "",
-              }}
-            >
-              {msg.type === "FILE" ? (
-                <img
-                  src={msg.message}
-                  alt="Uploaded file"
-                  style={{
-                    maxWidth: "400px",
-                    maxHeight: "300px",
-                    borderRadius: "8px",
-                  }}
-                />
-              ) : (
-                <Typography sx={styles.messageText}>{msg.message}</Typography>
-              )}
-            </Box>
-            {(msg.type === "MESSAGE" || msg.type === "FILE") && (
-              <Typography sx={styles.timestamp}>
-                {formatDate(msg.createAt)}
-              </Typography>
+              </Box>
+            ) : (
+              <Box
+                sx={{
+                  ...styles.messageBox,
+                  maxWidth: msg.message.length > 20 ? "60%" : "fit-content",
+                  backgroundColor: "#615ef1",
+                  alignSelf: "flex-end",
+                }}
+              >
+                {msg.type === "FILE" ? (
+                  <img
+                    src={msg.message}
+                    alt="Uploaded file"
+                    style={{
+                      maxWidth: "400px",
+                      maxHeight: "300px",
+                      borderRadius: "8px",
+                    }}
+                  />
+                ) : (
+                  <Typography sx={styles.messageText}>{msg.message}</Typography>
+                )}
+              </Box>
             )}
+            <Typography sx={styles.timestamp}>
+              {formatDate(msg.createAt)}
+            </Typography>
           </Box>
         ))}
       </Box>
 
-      {/* 하단 - 메시지 입력창 */}
       <Box sx={styles.messageInputContainer}>
         <input
           type="file"
@@ -355,9 +352,9 @@ const styles = {
   messageContainer: {
     flex: 1,
     padding: "1rem",
-    overflowY: "auto" as "auto",
+    overflowY: "auto",
     display: "flex",
-    flexDirection: "column" as "column",
+    flexDirection: "column",
     gap: "0.5rem",
   },
   messageRow: {
@@ -366,26 +363,29 @@ const styles = {
   },
   senderInfo: {
     display: "flex",
-    flexDirection: "column" as "column",
     alignItems: "center",
+  },
+  senderDetails: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+  },
+  messageAvatar: {
+    width: "40px",
+    height: "40px",
     marginRight: "0.5rem",
+  },
+  senderName: {
+    fontSize: "0.9rem",
+    color: "#fff",
+    marginBottom: "0.2rem",
   },
   messageBox: {
     display: "flex",
-    flexDirection: "column" as "column",
+    flexDirection: "column",
     maxWidth: "70%",
     borderRadius: "1rem",
     padding: "0.5rem 1rem",
-  },
-  messageAvatar: {
-    width: "30px",
-    height: "30px",
-    marginBottom: "0.2rem",
-  },
-  senderName: {
-    fontSize: "0.75rem",
-    color: "#b0b0b0",
-    textAlign: "center",
   },
   messageText: {
     color: "#fff",

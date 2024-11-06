@@ -156,11 +156,17 @@ const ChatLists: React.FC = () => {
   }, [selectedChatRoomId, loginId, stompClient]);
 
   // 채팅방 클릭 시, 해당 방을 현재 방으로 설정 및 알림 초기화 및 이동
-  const handleRoomClick = (chatRoomId: number, roomName: string) => {
+  const handleRoomClick = (
+    chatRoomId: number,
+    roomName: string,
+    userInfo: UserInfo[]
+  ) => {
     setSelectedChatRoomId(chatRoomId);
     console.log("Navigating with roomName:", roomName); // 전달하는 roomName 확인
     dispatch(setCurrentChat(chatRoomId.toString()));
-    navigate(`/chat/${loginId}/${chatRoomId}`, { state: { roomName } });
+    navigate(`/chat/${loginId}/${chatRoomId}`, {
+      state: { roomName, userInfo },
+    });
 
     // 알림 리셋 처리
     if (stompClient && stompClient.connected) {
@@ -279,7 +285,9 @@ const ChatLists: React.FC = () => {
               ? styles.selectedChatRoom
               : {}),
           }}
-          onClick={() => handleRoomClick(room.chatRoomId, room.roomName)}
+          onClick={() =>
+            handleRoomClick(room.chatRoomId, room.roomName, room.userInfo)
+          }
           onMouseEnter={(e) =>
             (e.currentTarget.style.backgroundColor = "#333333")
           }
