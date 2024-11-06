@@ -80,7 +80,7 @@ const ChatLists: React.FC = () => {
   // WebSocket을 통해 새 메시지를 수신할 때 알림 카운트를 업데이트하는 함수
   useEffect(() => {
     const urlPath = window.location.pathname;
-    const pathParts = urlPath.split('/');
+    const pathParts = urlPath.split("/");
     const nickname = pathParts[2];
     const roomId = pathParts[3];
 
@@ -97,47 +97,55 @@ const ChatLists: React.FC = () => {
 
     const subscribeToRoom = (nickname: string, roomId: string) => {
       if (!stompClient) return;
-      const subscription = stompClient.subscribe(`/queue/chatroom/${nickname}`, (message) => {
-        const receivedMessage = JSON.parse(message.body);
-        const chatRoomId = receivedMessage.roomId ? receivedMessage.roomId : roomId;
-        const createAt = receivedMessage.createAt;
-        const type = receivedMessage.type;
-        const newRecentMessage = type === "FILE"
-          ? `${receivedMessage.senderName}님이 사진을 보냈습니다.`
-          : receivedMessage.message;
+      const subscription = stompClient.subscribe(
+        `/queue/chatroom/${nickname}`,
+        (message) => {
+          const receivedMessage = JSON.parse(message.body);
+          const chatRoomId = receivedMessage.roomId
+            ? receivedMessage.roomId
+            : roomId;
+          const createAt = receivedMessage.createAt;
+          const type = receivedMessage.type;
+          const newRecentMessage =
+            type === "FILE"
+              ? `${receivedMessage.senderName}님이 사진을 보냈습니다.`
+              : receivedMessage.message;
 
-        setChatRooms((prevRooms) => {
-          return prevRooms.map((room) => {
-            if (room.chatRoomId === chatRoomId) {
-              return {
-                ...room,
-                notificationCount: receivedMessage.senderName === nickname
-                  ? room.notificationCount  // 유지
-                  : room.notificationCount + 1,
-                recentMessage: newRecentMessage,
-                createAt: createAt,
-              };
-            }
-            return room;
+          setChatRooms((prevRooms) => {
+            return prevRooms.map((room) => {
+              if (room.chatRoomId === chatRoomId) {
+                return {
+                  ...room,
+                  notificationCount:
+                    receivedMessage.senderName === nickname
+                      ? room.notificationCount // 유지
+                      : room.notificationCount + 1,
+                  recentMessage: newRecentMessage,
+                  createAt: createAt,
+                };
+              }
+              return room;
+            });
           });
-        });
 
-        setFilteredRooms((prevRooms) =>
-          prevRooms.map((room) => {
-            if (room.chatRoomId === chatRoomId) {
-              return {
-                ...room,
-                notificationCount: receivedMessage.senderName === nickname
-                  ? room.notificationCount  // 유지
-                  : room.notificationCount + 1,
-                recentMessage: newRecentMessage,
-                createAt: createAt,
-              };
-            }
-            return room;
-          })
-        );
-      });
+          setFilteredRooms((prevRooms) =>
+            prevRooms.map((room) => {
+              if (room.chatRoomId === chatRoomId) {
+                return {
+                  ...room,
+                  notificationCount:
+                    receivedMessage.senderName === nickname
+                      ? room.notificationCount // 유지
+                      : room.notificationCount + 1,
+                  recentMessage: newRecentMessage,
+                  createAt: createAt,
+                };
+              }
+              return room;
+            })
+          );
+        }
+      );
 
       return () => {
         subscription.unsubscribe();
@@ -145,19 +153,19 @@ const ChatLists: React.FC = () => {
     };
 
     connectStompClient();
-
   }, [selectedChatRoomId, loginId, stompClient]);
 
   // 채팅방 클릭 시, 해당 방을 현재 방으로 설정 및 알림 초기화 및 이동
-  const handleRoomClick = (chatRoomId: number) => {
+  const handleRoomClick = (chatRoomId: number, roomName: string) => {
     setSelectedChatRoomId(chatRoomId);
+    console.log("Navigating with roomName:", roomName); // 전달하는 roomName 확인
     dispatch(setCurrentChat(chatRoomId.toString()));
-    navigate(`/chat/${loginId}/${chatRoomId}`);
+    navigate(`/chat/${loginId}/${chatRoomId}`, { state: { roomName } });
 
     // 알림 리셋 처리
     if (stompClient && stompClient.connected) {
       const urlPath = window.location.pathname;
-      const pathParts = urlPath.split('/');
+      const pathParts = urlPath.split("/");
 
       const nickname = pathParts[2];
       const roomId = pathParts[3];
@@ -271,13 +279,13 @@ const ChatLists: React.FC = () => {
               ? styles.selectedChatRoom
               : {}),
           }}
-          onClick={() => handleRoomClick(room.chatRoomId)}
+          onClick={() => handleRoomClick(room.chatRoomId, room.roomName)}
           onMouseEnter={(e) =>
             (e.currentTarget.style.backgroundColor = "#333333")
           }
           onMouseLeave={(e) =>
-          (e.currentTarget.style.backgroundColor =
-            selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
+            (e.currentTarget.style.backgroundColor =
+              selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
           }
         >
           <Box sx={styles.profileContainer}>
@@ -285,8 +293,7 @@ const ChatLists: React.FC = () => {
           </Box>
           <Box sx={styles.chatDetails}>
             <Typography variant="body1" sx={styles.roomName}>
-              {room.roomName}
-              ({room.userCount})
+              {room.roomName}({room.userCount})
             </Typography>
             <Typography variant="body2" sx={styles.lastMessage}>
               {room.recentMessage}

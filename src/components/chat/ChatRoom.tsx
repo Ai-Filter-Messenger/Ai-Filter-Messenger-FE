@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useLocation } from "react-router-dom"; // useLocation 추가
 import {
   Box,
   IconButton,
@@ -61,6 +62,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const token = useSelector((state: RootState) => state.auth.token);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const location = useLocation();
+  const roomName = location.state?.roomName || "채팅방"; // roomName 가져오기
+  console.log("Received roomName in ChatRoom:", roomName); // ChatRoom에서 받은 roomName을 로그로 확인
 
   useEffect(() => {
     if (!currentConversation && conversations.length > 0) {
@@ -191,14 +195,11 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
   return (
     <Box sx={styles.container}>
-      {/* 상단 - 참여자 목록 */}
+      {/* 상단 - 채팅방 제목과 참여자 목록 */}
       <Box sx={styles.topBar}>
-        {currentConversation?.participants.map((participant, index) => (
-          <Box key={index} sx={styles.participant}>
-            <Avatar sx={styles.avatar}>{participant[0]}</Avatar>
-            <Typography sx={styles.participantName}>{participant}</Typography>
-          </Box>
-        ))}
+        <Typography variant="h6" sx={{ color: "#fff" }}>
+          {roomName}
+        </Typography>
         <Box sx={styles.icons}>
           <IconButton sx={styles.iconButton}>
             <FaSearch color="#fff" />
@@ -224,12 +225,15 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
             }}
           >
             {/* 상대방의 메시지일 경우 아바타와 이름 표시 */}
-            {msg.senderName !== user.name && (msg.type === "MESSAGE" || msg.type === "FILE") && (
-              <Box sx={styles.senderInfo}>
-                <Avatar sx={styles.messageAvatar}>{msg.senderName[0]}</Avatar>
-                <Typography sx={styles.senderName}>{msg.senderName}</Typography>
-              </Box>
-            )}
+            {msg.senderName !== user.name &&
+              (msg.type === "MESSAGE" || msg.type === "FILE") && (
+                <Box sx={styles.senderInfo}>
+                  <Avatar sx={styles.messageAvatar}>{msg.senderName[0]}</Avatar>
+                  <Typography sx={styles.senderName}>
+                    {msg.senderName}
+                  </Typography>
+                </Box>
+              )}
             <Box
               sx={{
                 ...styles.messageBox,
