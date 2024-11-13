@@ -22,6 +22,7 @@ import {
 } from "@/redux/slices/chat";
 import { stompClient } from "@/websocket/socketConnection";
 import axios from "@/utils/axios";
+import { useLocation } from "react-router-dom";
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -56,6 +57,12 @@ interface ChatRoomProps {
   chatRoomId: string | undefined;
 }
 
+interface UserInfo {
+  nickname: string;
+  profileImageUrl: string;
+  id: number;
+}
+
 const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -65,6 +72,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const roomName = location.state?.roomName || "채팅방";
+  const userInfo = location.state?.userInfo || [];
+  const messageContainerRef = useRef<HTMLDivElement>(null);
   const userInfo = location.state?.userInfo || []; // 각 유저 정보 가져오기
   const messageContainerRef = useRef<HTMLDivElement>(null); // 메시지 컨테이너 참조 추가
 
@@ -112,6 +121,23 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
       subscribeToChat();
     }
   }, [chatRoomId, token]);
+
+  // 메시지가 업데이트될 때마다 자동 스크롤
+  const scrollToBottom = () => {
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollTop =
+        messageContainerRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const getUserAvatar = (senderName: string) => {
+    const user = userInfo.find((u: UserInfo) => u.nickname === senderName);
+    return user?.profileImageUrl || ""; // 프로필 이미지 URL 반환
+  };
 
   // 메시지가 업데이트될 때마다 자동 스크롤
   const scrollToBottom = () => {
@@ -210,6 +236,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         </Box>
       </Box>
 
+      {/* 채팅 메시지 리스트 */}
+      <Box sx={styles.messageContainer} ref={messageContainerRef}>
+        {messages?.map((msg, index) => (
       <Box sx={styles.messageContainer} ref={messageContainerRef}>
         {messages?.map((msg) => (
           <Box
@@ -220,97 +249,60 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                 msg.senderName === user.name ? "row-reverse" : "row",
             }}
           >
-            {/* 시스템 메시지 구분 처리 */}
-            {msg.type !== MessageType.MESSAGE &&
-            msg.type !== MessageType.FILE ? (
-              <Box
-                sx={{
-                  ...styles.systemMessage,
-                  alignSelf: "center",
-                  backgroundColor: "#444",
-                  borderRadius: "1rem",
-                  padding: "0.5rem 1rem",
-                  color: "#fff",
-                  fontSize: "0.8rem",
-                }}
-              >
-                <Typography>{msg.message}</Typography>
-              </Box>
-            ) : (
-              <>
-                {msg.senderName !== user.name ? (
-                  <Box sx={styles.senderInfo}>
-                    <Avatar
-                      sx={styles.messageAvatar}
-                      src={getUserAvatar(msg.senderName)}
-                      alt={msg.senderName}
-                    />
-                    <Box sx={styles.senderDetails}>
-                      <Typography sx={styles.senderName}>
-                        {msg.senderName}
-                      </Typography>
-                      <Box
-                        sx={{
-                          ...styles.messageBox,
-                          maxWidth:
-                            msg.message.length > 20 ? "60%" : "fit-content",
-                          backgroundColor: "#3b4654",
-                        }}
-                      >
-                        {msg.type === MessageType.FILE ? (
-                          <img
-                            src={msg.message}
-                            alt="Uploaded file"
-                            onLoad={scrollToBottom}
-                            style={{
-                              maxWidth: "400px",
-                              maxHeight: "300px",
-                              borderRadius: "8px",
-                            }}
-                          />
-                        ) : (
-                          <Typography sx={styles.messageText}>
-                            {msg.message}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
+            {/* 상대방의 메시지일 경우 아바타와 이름 표시 */}
+            {msg.senderName !== user.name &&
+              (msg.type === "MESSAGE" || msg.type === "FILE") && (
+                <Box sx={styles.senderInfo}>
+                  <Avatar
+                    sx={styles.messageAvatar}
+                    src={getUserAvatar(msg.senderName)}
+                    alt={msg.senderName}
+                  />
+                  <Box sx={styles.senderDetails}>
+                    <Typography sx={styles.senderName}>
+                      {msg.senderName}
+                    </Typography>
                   </Box>
-                ) : (
-                  <Box
-                    sx={{
-                      ...styles.messageBox,
-                      maxWidth: msg.message.length > 20 ? "60%" : "fit-content",
-                      backgroundColor: "#615ef1",
-                      alignSelf: "flex-end",
-                    }}
-                  >
-                    {msg.type === MessageType.FILE ? (
-                      <img
-                        src={msg.message}
-                        alt="Uploaded file"
-                        onLoad={scrollToBottom}
-                        style={{
-                          maxWidth: "400px",
-                          maxHeight: "300px",
-                          borderRadius: "8px",
-                        }}
-                      />
-                    ) : (
-                      <Typography sx={styles.messageText}>
-                        {msg.message}
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-                {/* 타임스탬프 표시: 시스템 메시지가 아닌 경우에만 표시 */}
-                {msg.type === MessageType.MESSAGE ||
-                msg.type === MessageType.FILE ? (
-                  <Typography sx={styles.timestamp}>
-                    {formatDate(msg.createAt)}
-                  </Typography>
-                ) : null}
-              </>
+                </Box>
+              )}
+            <Box
+              sx={{
+                ...styles.messageBox,
+                backgroundColor:
+                  msg.type !== "MESSAGE" && msg.type !== "FILE"
+                    ? "#9669ad"
+                    : msg.senderName === user.name
+                      ? "#615ef1"
+                      : "#3b4654",
+                alignSelf:
+                  msg.type !== "MESSAGE" && msg.type !== "FILE"
+                    ? "center"
+                    : msg.senderName === user.name
+                      ? "flex-end"
+                      : "flex-start",
+                margin:
+                  msg.type !== "MESSAGE" && msg.type !== "FILE" ? "0 auto" : "",
+              }}
+            >
+              {msg.type === "FILE" ? (
+                <img
+                  src={msg.message}
+                  alt="Uploaded file"
+                  onLoad={scrollToBottom}
+                  style={{
+                    maxWidth: "400px",
+                    maxHeight: "300px",
+                    borderRadius: "8px",
+                  }}
+                />
+              ) : (
+                <Typography sx={styles.messageText}>{msg.message}</Typography>
+              )}
+            </Box>
+            {(msg.type === "MESSAGE" || msg.type === "FILE") && (
+              <Typography sx={styles.timestamp}>
+                {formatDate(msg.createAt)}
+              </Typography>
             )}
           </Box>
         ))}
@@ -416,6 +408,11 @@ const styles = {
     width: "40px",
     height: "40px",
     marginRight: "0.7rem",
+  },
+  senderDetails: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
   },
   senderName: {
     fontSize: "0.9rem",
