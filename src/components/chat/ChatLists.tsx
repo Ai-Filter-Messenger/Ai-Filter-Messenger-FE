@@ -234,7 +234,18 @@ const ChatLists: React.FC = () => {
 
   const handleCreateRoom = async () => {
     try {
+      const defaultRoomName =
+        selectedFriends.length > 0 ? selectedFriends.join(", ") : nickname;
+      const roomName = defaultRoomName; // roomName을 선언하고 defaultRoomName으로 초기화
+      const participants = [...selectedFriends];
       const response = await axios.post("/api/chat/create", {
+        loginId,
+        roomName: "",
+        nicknames: selectedFriends,
+        type: chatRoomType,
+      });
+
+      console.log("Sending request to create chat room:", {
         loginId,
         roomName: "",
         nicknames: selectedFriends,
