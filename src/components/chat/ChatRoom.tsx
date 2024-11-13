@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { useLocation } from "react-router-dom";
 import {
   Box,
   IconButton,
@@ -19,6 +18,7 @@ import {
   addMessageSuccess,
   sendMessage,
   setCurrentConversation,
+  fetchMessages,
 } from "@/redux/slices/chat";
 import { stompClient } from "@/websocket/socketConnection";
 import axios from "@/utils/axios";
@@ -38,19 +38,14 @@ enum MessageType {
   MESSAGE = "MESSAGE",
 }
 
+// Message 인터페이스
 interface Message {
   type: MessageType;
   id: string;
   message: string;
   senderName: string;
   roomId: string;
-  createAt: string;
-}
-
-interface UserInfo {
-  nickname: string;
-  profileImageUrl: string;
-  id: number;
+  createAt: string; // ISO 형식의 문자열로 ZonedDateTime을 표현
 }
 
 interface ChatRoomProps {
@@ -66,6 +61,9 @@ interface UserInfo {
 const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
+  const { currentConversation, conversations } = useSelector(
+    (state: RootState) => state.chat
+  );
   const [newMessage, setNewMessage] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const token = useSelector((state: RootState) => state.auth.token);
@@ -74,13 +72,17 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const roomName = location.state?.roomName || "채팅방";
   const userInfo = location.state?.userInfo || [];
   const messageContainerRef = useRef<HTMLDivElement>(null);
-  const userInfo = location.state?.userInfo || []; // 각 유저 정보 가져오기
-  const messageContainerRef = useRef<HTMLDivElement>(null); // 메시지 컨테이너 참조 추가
 
-  const getUserAvatar = (senderName: string) => {
-    const user = userInfo.find((u: UserInfo) => u.nickname === senderName);
-    return user?.profileImageUrl || ""; // 프로필 이미지 URL 반환
-  };
+  useEffect(() => {
+    if (!currentConversation && conversations.length > 0) {
+      const firstConversation = conversations.find(
+        (conv) => conv.id === chatRoomId
+      );
+      if (firstConversation) {
+        dispatch(setCurrentConversation(firstConversation));
+      }
+    }
+  }, [currentConversation, conversations, chatRoomId, dispatch]);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -91,48 +93,42 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
           },
           params: { chatRoomId },
         });
+        console.log(response.data);
         setMessages(response.data.reverse());
       } catch (error) {
-        console.error("Failed to fetch messages:", error);
+        console.error("Failed to fetch chat rooms:", error);
       }
     };
 
     fetchMessages();
-
+    let subscription: any = null;
     const subscribeToChat = () => {
-      const subscription = stompClient?.subscribe(
-        `/topic/chatroom/${chatRoomId}`,
-        (message) => {
-          const receivedMessage: Message = {
-            ...JSON.parse(message.body),
-            type: MessageType[
-              JSON.parse(message.body).type as keyof typeof MessageType
-            ], // Type casting
-          };
-          setMessages((prevMessages) => [...prevMessages, receivedMessage]);
-        }
-      );
-      return () => subscription?.unsubscribe();
+      if (stompClient && stompClient.connected) {
+        subscription = stompClient.subscribe(
+          `/topic/chatroom/${chatRoomId}`,
+          (message) => {
+            const receivedMessage = JSON.parse(message.body);
+            console.log(receivedMessage);
+            // 새 메시지를 기존 메시지 배열에 추가
+            setMessages((prevMessages) => [...prevMessages, receivedMessage]);
+          }
+        );
+      } else {
+        console.error("STOMP 클라이언트가 연결되지 않았습니다.");
+      }
     };
 
+    // 초기 연결이 되지 않았으면, 연결 이벤트가 완료된 후 구독 시도
     if (stompClient && !stompClient.connected) {
       stompClient.connect({}, subscribeToChat);
     } else {
       subscribeToChat();
     }
-  }, [chatRoomId, token]);
 
-  // 메시지가 업데이트될 때마다 자동 스크롤
-  const scrollToBottom = () => {
-    if (messageContainerRef.current) {
-      messageContainerRef.current.scrollTop =
-        messageContainerRef.current.scrollHeight;
-    }
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
+  }, [chatRoomId, stompClient]);
 
   const getUserAvatar = (senderName: string) => {
     const user = userInfo.find((u: UserInfo) => u.nickname === senderName);
@@ -159,11 +155,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         senderName: user.name,
         roomId: chatRoomId,
         createAt: new Date().toISOString(),
-        type: MessageType.MESSAGE,
+        type: "MESSAGE",
       };
       dispatch(addMessageSuccess(message));
       dispatch(sendMessage(chatRoomId, message, user.token || ""));
-      setMessages((prevMessages) => [...prevMessages, message]); // 새로고침 없이 파일 메시지 추가
       setNewMessage("");
     }
   };
@@ -189,10 +184,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         const response = await axios.post("/file/upload", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token}`, // 인증 토큰 추가
           },
         });
         if (response.status === 200) {
+          console.log("파일 업로드 성공");
+          alert("파일 업로드 성공");
+
+          // 업로드한 파일을 메시지로 표시
           const result = response.data;
           const message: Message = {
             id: uuidv4(),
@@ -203,12 +202,13 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
             type: MessageType.FILE,
           };
           dispatch(addMessageSuccess(message));
-          setMessages((prevMessages) => [...prevMessages, message]);
         } else {
-          console.error("File upload failed");
+          console.error("파일 업로드 실패");
+          alert("파일 업로드 실패");
         }
       } catch (error) {
-        console.error("File upload error:", error);
+        console.error("파일 업로드 오류:", error);
+        alert("파일 업로드 오류");
       }
     }
   };
@@ -219,6 +219,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
   return (
     <Box sx={styles.container}>
+      {/* 상단 - 참여자 목록 */}
       <Box sx={styles.topBar}>
         <Typography variant="h6" sx={{ color: "#fff" }}>
           {roomName}
@@ -239,8 +240,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
       {/* 채팅 메시지 리스트 */}
       <Box sx={styles.messageContainer} ref={messageContainerRef}>
         {messages?.map((msg, index) => (
-      <Box sx={styles.messageContainer} ref={messageContainerRef}>
-        {messages?.map((msg) => (
           <Box
             key={msg.id}
             sx={{
@@ -308,6 +307,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         ))}
       </Box>
 
+      {/* 하단 - 메시지 입력창 */}
       <Box sx={styles.messageInputContainer}>
         <input
           type="file"
@@ -386,9 +386,9 @@ const styles = {
   messageContainer: {
     flex: 1,
     padding: "1rem",
-    overflowY: "auto",
+    overflowY: "auto" as "auto",
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "column" as "column",
     gap: "0.5rem",
   },
   messageRow: {
@@ -397,17 +397,21 @@ const styles = {
   },
   senderInfo: {
     display: "flex",
+    flexDirection: "column" as "column",
     alignItems: "center",
+    marginRight: "0.5rem",
   },
-  senderDetails: {
+  messageBox: {
     display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
+    flexDirection: "column" as "column",
+    maxWidth: "70%",
+    borderRadius: "1rem",
+    padding: "0.5rem 1rem",
   },
   messageAvatar: {
-    width: "40px",
-    height: "40px",
-    marginRight: "0.7rem",
+    width: "30px",
+    height: "30px",
+    marginBottom: "0.2rem",
   },
   senderDetails: {
     display: "flex",
@@ -415,17 +419,9 @@ const styles = {
     alignItems: "flex-start",
   },
   senderName: {
-    fontSize: "0.9rem",
-    color: "#fff",
-    marginBottom: "0.2rem",
-  },
-  messageBox: {
-    display: "flex",
-    flexDirection: "column",
-    maxWidth: "70%",
-    borderRadius: "1rem",
-    padding: "0.5rem 1rem",
-    marginBottom: "0.5rem",
+    fontSize: "0.75rem",
+    color: "#b0b0b0",
+    textAlign: "center",
   },
   messageText: {
     color: "#fff",
@@ -467,15 +463,6 @@ const styles = {
     padding: "0.5rem",
     marginLeft: "0.5rem",
     fontSize: "1.1rem",
-  },
-  systemMessage: {
-    textAlign: "center",
-    fontSize: "0.8rem",
-    color: "#ffffff",
-    backgroundColor: "#444",
-    padding: "0.3rem 1rem",
-    borderRadius: "12px",
-    margin: "0.5rem auto",
   },
 };
 
