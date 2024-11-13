@@ -22,6 +22,7 @@ import {
 } from "@/redux/slices/chat";
 import { stompClient } from "@/websocket/socketConnection";
 import axios from "@/utils/axios";
+import { useLocation } from "react-router-dom";
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -51,6 +52,12 @@ interface ChatRoomProps {
   chatRoomId: string | undefined;
 }
 
+interface UserInfo {
+  nickname: string;
+  profileImageUrl: string;
+  id: number;
+}
+
 const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -61,6 +68,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const token = useSelector((state: RootState) => state.auth.token);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const location = useLocation();
+  const roomName = location.state?.roomName || "채팅방";
+  const userInfo = location.state?.userInfo || [];
+  const messageContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!currentConversation && conversations.length > 0) {
@@ -118,6 +129,23 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
       if (subscription) subscription.unsubscribe();
     };
   }, [chatRoomId, stompClient]);
+
+  const getUserAvatar = (senderName: string) => {
+    const user = userInfo.find((u: UserInfo) => u.nickname === senderName);
+    return user?.profileImageUrl || ""; // 프로필 이미지 URL 반환
+  };
+
+  // 메시지가 업데이트될 때마다 자동 스크롤
+  const scrollToBottom = () => {
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollTop =
+        messageContainerRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleSendMessage = () => {
     if (newMessage.trim() !== "" && chatRoomId) {
@@ -193,12 +221,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
     <Box sx={styles.container}>
       {/* 상단 - 참여자 목록 */}
       <Box sx={styles.topBar}>
-        {currentConversation?.participants.map((participant, index) => (
-          <Box key={index} sx={styles.participant}>
-            <Avatar sx={styles.avatar}>{participant[0]}</Avatar>
-            <Typography sx={styles.participantName}>{participant}</Typography>
-          </Box>
-        ))}
+        <Typography variant="h6" sx={{ color: "#fff" }}>
+          {roomName}
+        </Typography>
         <Box sx={styles.icons}>
           <IconButton sx={styles.iconButton}>
             <FaSearch color="#fff" />
@@ -213,7 +238,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
       </Box>
 
       {/* 채팅 메시지 리스트 */}
-      <Box sx={styles.messageContainer}>
+      <Box sx={styles.messageContainer} ref={messageContainerRef}>
         {messages?.map((msg, index) => (
           <Box
             key={msg.id}
@@ -224,12 +249,21 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
             }}
           >
             {/* 상대방의 메시지일 경우 아바타와 이름 표시 */}
-            {msg.senderName !== user.name && (msg.type === "MESSAGE" || msg.type === "FILE") && (
-              <Box sx={styles.senderInfo}>
-                <Avatar sx={styles.messageAvatar}>{msg.senderName[0]}</Avatar>
-                <Typography sx={styles.senderName}>{msg.senderName}</Typography>
-              </Box>
-            )}
+            {msg.senderName !== user.name &&
+              (msg.type === "MESSAGE" || msg.type === "FILE") && (
+                <Box sx={styles.senderInfo}>
+                  <Avatar
+                    sx={styles.messageAvatar}
+                    src={getUserAvatar(msg.senderName)}
+                    alt={msg.senderName}
+                  />
+                  <Box sx={styles.senderDetails}>
+                    <Typography sx={styles.senderName}>
+                      {msg.senderName}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
             <Box
               sx={{
                 ...styles.messageBox,
@@ -253,6 +287,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                 <img
                   src={msg.message}
                   alt="Uploaded file"
+                  onLoad={scrollToBottom}
                   style={{
                     maxWidth: "400px",
                     maxHeight: "300px",
@@ -377,6 +412,11 @@ const styles = {
     width: "30px",
     height: "30px",
     marginBottom: "0.2rem",
+  },
+  senderDetails: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
   },
   senderName: {
     fontSize: "0.75rem",
