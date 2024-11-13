@@ -7,9 +7,18 @@ import {
   Avatar,
   TextField,
   InputAdornment,
+  Modal,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
-import { FaSearch, FaBell } from "react-icons/fa";
-import { FaCirclePlus, FaRegFaceSmile } from "react-icons/fa6";
+import { FaSearch, FaBell, FaThumbtack, FaUserPlus } from "react-icons/fa";
+import {
+  FaCirclePlus,
+  FaRegFaceSmile,
+  FaArrowRightFromBracket,
+} from "react-icons/fa6";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { IoSend } from "react-icons/io5";
 import { RootState, AppDispatch } from "@/redux/store";
@@ -18,7 +27,6 @@ import {
   addMessageSuccess,
   sendMessage,
   setCurrentConversation,
-  fetchMessages,
 } from "@/redux/slices/chat";
 import { stompClient } from "@/websocket/socketConnection";
 import axios from "@/utils/axios";
@@ -72,6 +80,25 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const roomName = location.state?.roomName || "채팅방";
   const userInfo = location.state?.userInfo || [];
   const messageContainerRef = useRef<HTMLDivElement>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+
+  const handlePinChatRoom = () => {
+    console.log("채팅방 고정");
+    handleCloseModal();
+  };
+
+  const handleInviteUser = () => {
+    console.log("초대하기");
+    handleCloseModal();
+  };
+
+  const handleLeaveChatRoom = () => {
+    console.log("나가기");
+    handleCloseModal();
+  };
 
   useEffect(() => {
     if (!currentConversation && conversations.length > 0) {
@@ -231,15 +258,52 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
           <IconButton sx={styles.iconButton}>
             <FaBell color="#fff" />
           </IconButton>
-          <IconButton sx={styles.iconButton}>
+          <IconButton sx={styles.iconButton} onClick={handleOpenModal}>
             <BsThreeDotsVertical color="#fff" />
           </IconButton>
         </Box>
       </Box>
 
+      <Modal open={isModalOpen} onClose={handleCloseModal}>
+        <Box sx={styles.modalContainer}>
+          <List>
+            <ListItem
+              component="button"
+              onClick={handlePinChatRoom}
+              sx={styles.listItem}
+            >
+              <ListItemIcon>
+                <FaThumbtack />
+              </ListItemIcon>
+              <ListItemText primary="채팅방 고정" />
+            </ListItem>
+            <ListItem
+              component="button"
+              onClick={handleInviteUser}
+              sx={styles.listItem}
+            >
+              <ListItemIcon>
+                <FaUserPlus />
+              </ListItemIcon>
+              <ListItemText primary="초대하기" />
+            </ListItem>
+            <ListItem
+              component="button"
+              onClick={handleLeaveChatRoom}
+              sx={styles.listItem}
+            >
+              <ListItemIcon>
+                <FaArrowRightFromBracket />
+              </ListItemIcon>
+              <ListItemText primary="나가기" />
+            </ListItem>
+          </List>
+        </Box>
+      </Modal>
+
       {/* 채팅 메시지 리스트 */}
       <Box sx={styles.messageContainer} ref={messageContainerRef}>
-        {messages?.map((msg, index) => (
+        {messages?.map((msg) => (
           <Box
             key={msg.id}
             sx={{
@@ -361,6 +425,30 @@ const styles = {
     justifyContent: "space-between",
     padding: "1rem",
     borderBottom: "1px solid #333",
+  },
+  modalContainer: {
+    position: "absolute",
+    top: "4.3rem",
+    right: "32rem",
+    backgroundColor: "#222",
+    boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
+    borderRadius: "8px",
+    overflow: "hidden",
+  },
+  listItem: {
+    display: "flex",
+    alignItems: "center",
+    cursor: "pointer",
+    backgroundColor: "#222",
+    color: "#fff",
+    padding: "0.2rem 1.8rem",
+    "&:hover": {
+      backgroundColor: "#333",
+    },
+    "&:active": {
+      backgroundColor: "#444",
+    },
+    border: "none",
   },
   participant: {
     display: "flex",
