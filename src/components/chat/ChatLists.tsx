@@ -80,7 +80,7 @@ const ChatLists: React.FC = () => {
   // WebSocket을 통해 새 메시지를 수신할 때 알림 카운트를 업데이트하는 함수
   useEffect(() => {
     const urlPath = window.location.pathname;
-    const pathParts = urlPath.split('/');
+    const pathParts = urlPath.split("/");
     const nickname = pathParts[2];
     const roomId = pathParts[3];
 
@@ -97,47 +97,55 @@ const ChatLists: React.FC = () => {
 
     const subscribeToRoom = (nickname: string, roomId: string) => {
       if (!stompClient) return;
-      const subscription = stompClient.subscribe(`/queue/chatroom/${nickname}`, (message) => {
-        const receivedMessage = JSON.parse(message.body);
-        const chatRoomId = receivedMessage.roomId ? receivedMessage.roomId : roomId;
-        const createAt = receivedMessage.createAt;
-        const type = receivedMessage.type;
-        const newRecentMessage = type === "FILE"
-          ? `${receivedMessage.senderName}님이 사진을 보냈습니다.`
-          : receivedMessage.message;
+      const subscription = stompClient.subscribe(
+        `/queue/chatroom/${nickname}`,
+        (message) => {
+          const receivedMessage = JSON.parse(message.body);
+          const chatRoomId = receivedMessage.roomId
+            ? receivedMessage.roomId
+            : roomId;
+          const createAt = receivedMessage.createAt;
+          const type = receivedMessage.type;
+          const newRecentMessage =
+            type === "FILE"
+              ? `${receivedMessage.senderName}님이 사진을 보냈습니다.`
+              : receivedMessage.message;
 
-        setChatRooms((prevRooms) => {
-          return prevRooms.map((room) => {
-            if (room.chatRoomId === chatRoomId) {
-              return {
-                ...room,
-                notificationCount: receivedMessage.senderName === nickname
-                  ? room.notificationCount  // 유지
-                  : room.notificationCount + 1,
-                recentMessage: newRecentMessage,
-                createAt: createAt,
-              };
-            }
-            return room;
+          setChatRooms((prevRooms) => {
+            return prevRooms.map((room) => {
+              if (room.chatRoomId === chatRoomId) {
+                return {
+                  ...room,
+                  notificationCount:
+                    receivedMessage.senderName === nickname
+                      ? room.notificationCount // 유지
+                      : room.notificationCount + 1,
+                  recentMessage: newRecentMessage,
+                  createAt: createAt,
+                };
+              }
+              return room;
+            });
           });
-        });
 
-        setFilteredRooms((prevRooms) =>
-          prevRooms.map((room) => {
-            if (room.chatRoomId === chatRoomId) {
-              return {
-                ...room,
-                notificationCount: receivedMessage.senderName === nickname
-                  ? room.notificationCount  // 유지
-                  : room.notificationCount + 1,
-                recentMessage: newRecentMessage,
-                createAt: createAt,
-              };
-            }
-            return room;
-          })
-        );
-      });
+          setFilteredRooms((prevRooms) =>
+            prevRooms.map((room) => {
+              if (room.chatRoomId === chatRoomId) {
+                return {
+                  ...room,
+                  notificationCount:
+                    receivedMessage.senderName === nickname
+                      ? room.notificationCount // 유지
+                      : room.notificationCount + 1,
+                  recentMessage: newRecentMessage,
+                  createAt: createAt,
+                };
+              }
+              return room;
+            })
+          );
+        }
+      );
 
       return () => {
         subscription.unsubscribe();
@@ -145,7 +153,6 @@ const ChatLists: React.FC = () => {
     };
 
     connectStompClient();
-
   }, [selectedChatRoomId, loginId, stompClient]);
 
   // 채팅방 클릭 시, 해당 방을 현재 방으로 설정 및 알림 초기화 및 이동
@@ -163,7 +170,7 @@ const ChatLists: React.FC = () => {
     // 알림 리셋 처리
     if (stompClient && stompClient.connected) {
       const urlPath = window.location.pathname;
-      const pathParts = urlPath.split('/');
+      const pathParts = urlPath.split("/");
 
       const nickname = pathParts[2];
       const roomId = pathParts[3];
@@ -235,19 +242,31 @@ const ChatLists: React.FC = () => {
   const handleCreateRoom = async () => {
     try {
       const defaultRoomName =
-        selectedFriends.length > 0 ? selectedFriends.join(", ") : nickname;
-      const roomName = defaultRoomName; // roomName을 선언하고 defaultRoomName으로 초기화
+        selectedFriends.length > 0
+          ? selectedFriends.join(", ")
+          : nickname || "Default Room";
+      const roomName = defaultRoomName; // roomName이 빈 문자열이 되지 않도록 설정
       const participants = [...selectedFriends];
-      const response = await axios.post("/api/chat/create", {
-        loginId,
-        roomName: "",
-        nicknames: selectedFriends,
-        type: chatRoomType,
-      });
+
+      const response = await axios.post(
+        "/chat/create", // API 엔드포인트 확인 필요
+        {
+          loginId,
+          roomName: roomName, // 유효한 roomName 사용
+          nicknames: selectedFriends,
+          type: chatRoomType,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // 올바른 토큰 포함
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       console.log("Sending request to create chat room:", {
         loginId,
-        roomName: "",
+        roomName,
         nicknames: selectedFriends,
         type: chatRoomType,
       });
@@ -255,11 +274,22 @@ const ChatLists: React.FC = () => {
       if (response.status === 200) {
         alert("Chat room created successfully!");
         setIsModalOpen(false);
+
+        // 채팅방 목록 새로고침
         const updatedRooms = await axios.get("/chat/find/list", {
+          headers: {
+            Authorization: `Bearer ${token}`, // 토큰 포함
+          },
           params: { loginId },
         });
+
         setChatRooms(updatedRooms.data);
         setFilteredRooms(updatedRooms.data);
+      } else {
+        console.error(
+          "Failed to create chat room, status code:",
+          response.status
+        );
       }
     } catch (error) {
       console.error("Failed to create chat room:", error);
@@ -295,8 +325,8 @@ const ChatLists: React.FC = () => {
             (e.currentTarget.style.backgroundColor = "#333333")
           }
           onMouseLeave={(e) =>
-          (e.currentTarget.style.backgroundColor =
-            selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
+            (e.currentTarget.style.backgroundColor =
+              selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
           }
         >
           <Box sx={styles.profileContainer}>
@@ -351,6 +381,14 @@ const ChatLists: React.FC = () => {
             label="친구를 검색하세요"
             value={friendSearch}
             onChange={(e) => setFriendSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && friendSearch.trim()) {
+                // Enter 키가 눌렸고, friendSearch가 비어있지 않은 경우에만 추가
+                setSelectedFriends((prev) => [...prev, friendSearch.trim()]);
+                setFriendSearch(""); // 입력창 초기화
+                e.preventDefault(); // 기본 Enter 동작 방지 (ex. 폼 제출)
+              }
+            }}
             sx={styles.textField}
           />
 

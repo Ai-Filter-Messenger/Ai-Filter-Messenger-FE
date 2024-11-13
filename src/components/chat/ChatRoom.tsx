@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
+import axios from "@/utils/axios";
+import { stompClient } from "@/websocket/socketConnection";
 import {
   Box,
   IconButton,
@@ -27,10 +30,8 @@ import {
   addMessageSuccess,
   sendMessage,
   setCurrentConversation,
+  setCurrentChat,
 } from "@/redux/slices/chat";
-import { stompClient } from "@/websocket/socketConnection";
-import axios from "@/utils/axios";
-import { useLocation } from "react-router-dom";
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -56,6 +57,18 @@ interface Message {
   createAt: string; // ISO 형식의 문자열로 ZonedDateTime을 표현
 }
 
+interface ChatRoom {
+  chatRoomId: number;
+  type: string;
+  roomName: string;
+  userInfo: UserInfo[];
+  userCount: number;
+  recentMessage: string;
+  createAt: string;
+  fix: boolean;
+  notificationCount: number;
+}
+
 interface ChatRoomProps {
   chatRoomId: string | undefined;
 }
@@ -68,13 +81,19 @@ interface UserInfo {
 
 const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate(); // navigate 훅 추가
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]); // chatRooms 상태 추가
+  const [filteredRooms, setFilteredRooms] = useState<ChatRoom[]>([]); // filteredRooms 상태 추가
+  const [selectedChatRoomId, setSelectedChatRoomId] = useState<number | null>(
+    null
+  ); // selectedChatRoomId 상태 추가
+  const { user, token } = useSelector((state: RootState) => state.auth); // user와 token 가져오기
+  const loginId = user?.loginId; // loginId 설정
   const { currentConversation, conversations } = useSelector(
     (state: RootState) => state.chat
   );
   const [newMessage, setNewMessage] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const token = useSelector((state: RootState) => state.auth.token);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const roomName = location.state?.roomName || "채팅방";
@@ -95,9 +114,41 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
     handleCloseModal();
   };
 
-  const handleLeaveChatRoom = () => {
-    console.log("나가기");
-    handleCloseModal();
+  const handleLeaveChatRoom = async () => {
+    try {
+      await axios.put(
+        "/chat/leave",
+        { chatRoomId: chatRoomId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log("채팅방에서 나왔습니다.");
+
+      // 채팅방 목록 새로고침
+      const updatedRoomsResponse = await axios.get("/chat/find/list", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params: { loginId },
+      });
+      setChatRooms(updatedRoomsResponse.data);
+      setFilteredRooms(updatedRoomsResponse.data);
+
+      // 선택된 채팅방 ID를 null로 설정하여 빈 페이지 렌더링
+      setSelectedChatRoomId(null);
+      dispatch(setCurrentChat("")); // 빈 문자열 전달하여 string 타입 맞춤
+      navigate(`/chat/${loginId}`, { replace: true }); // URL 업데이트하여 빈 페이지 표시
+
+      // 모달 닫기
+      handleCloseModal();
+    } catch (error) {
+      console.error("채팅방 나가기 실패:", error);
+      alert("채팅방 나가기에 실패했습니다.");
+    }
   };
 
   useEffect(() => {
