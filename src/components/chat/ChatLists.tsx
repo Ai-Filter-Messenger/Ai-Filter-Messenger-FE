@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { AppDispatch, RootState } from "@/redux/store";
 import { setCurrentChat } from "@/redux/slices/chat";
-import { FaPlus } from "react-icons/fa6";
+import { FaPlus, FaThumbtack } from "react-icons/fa6";
 import axios from "@/utils/axios";
 import SearchBar from "@/components/SearchBar";
 import { stompClient } from "@/websocket/socketConnection";
@@ -426,13 +426,16 @@ const ChatLists: React.FC = () => {
           </Box>
           <Box sx={styles.chatDetails}>
             <Typography variant="body1" sx={styles.roomName}>
-              {room.roomTitle}({room.userCount})
+              {room.roomTitle} ({room.userCount})
             </Typography>
             <Typography variant="body2" sx={styles.lastMessage}>
               {room.recentMessage}
             </Typography>
           </Box>
-          <Box sx={styles.chatMeta}>
+          <Box sx={styles.chatMeta} display="flex" flexDirection="column" alignItems="center">
+            {room.fix && (
+              <FaThumbtack style={{ fontSize: '12px', marginBottom: '15px' }} /> // 핀 아이콘을 시간 위로 배치
+            )}
             <Typography variant="caption" sx={styles.messageTime}>
               {new Date(room.createAt).toLocaleTimeString([], {
                 hour: "2-digit",
@@ -542,11 +545,19 @@ const styles = {
     flexDirection: "row",
   },
   avatarOverlap: {
-    marginLeft: "-0.5rem",
-    border: "0.125rem solid #1f1f1f",
+    width: '30px', // 아바타 크기 조정
+    height: '30px',
+    borderRadius: '50%',
+    marginLeft: '-15px', // 겹침을 더 강하게 하기 위해 음수 값 사용
+    border: '2px solid #333', // 경계선 추가 (선택 사항)
   },
   moreAvatar: {
-    backgroundColor: "#666",
+    width: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    backgroundColor: '#666',
+    fontSize: '12px',
+    marginLeft: '-15px', // 겹침 효과 동일하게 적용
   },
   chatDetails: {
     flex: 1,

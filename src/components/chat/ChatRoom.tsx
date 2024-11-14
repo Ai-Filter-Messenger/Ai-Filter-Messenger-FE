@@ -116,8 +116,24 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
 
-  const handlePinChatRoom = () => {
+  const handlePinChatRoom = async () => {
     console.log("채팅방 고정");
+    try {
+      const response = await axios.put(
+        `/chat/pin/toggle?chatRoomId=${chatRoomId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      alert(response.data);
+    } catch (error) {
+      console.error("채팅방 고정 실패:", error);
+      alert("채팅방 고정에 실패했습니다.");
+    }
     handleCloseModal();
   };
 
