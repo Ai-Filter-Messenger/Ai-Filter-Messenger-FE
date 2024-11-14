@@ -490,9 +490,9 @@ const styles = {
     borderBottom: "1px solid #333",
   },
   modalContainer: {
-    position: "absolute",
+    position: "fixed",
     top: "4.3rem",
-    right: "32rem",
+    right: "20%",
     backgroundColor: "#222",
     boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
     borderRadius: "8px",
