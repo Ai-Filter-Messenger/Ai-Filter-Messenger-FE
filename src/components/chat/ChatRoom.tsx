@@ -141,14 +141,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
       console.log("채팅방에서 나왔습니다.");
 
       // 채팅방 목록 새로고침
-      const updatedRoomsResponse = await axios.get("/chat/find/list", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: { loginId },
-      });
-      setChatRooms(updatedRoomsResponse.data);
-      setFilteredRooms(updatedRoomsResponse.data);
+      // const updatedRoomsResponse = await axios.get("/chat/find/list", {
+      //   headers: {
+      //     Authorization: `Bearer ${token}`,
+      //   },
+      //   params: { loginId },
+      // });
+      // setChatRooms(updatedRoomsResponse.data);
+      // setFilteredRooms(updatedRoomsResponse.data);
 
       // 선택된 채팅방 ID를 null로 설정하여 빈 페이지 렌더링
       setSelectedChatRoomId(null);

@@ -72,11 +72,7 @@ const ChatLists: React.FC = () => {
           const roomName = room.userInfo
             .map((user) => user.nickname)
             .join(", ");
-          const roomTitle =
-            room.userInfo
-              .filter((user) => user.nickname !== nickname)
-              .map((user) => user.nickname)
-              .join(", ") || "채팅방";
+          const roomTitle = room.roomName;
           return { ...room, roomName, roomTitle };
         });
 
@@ -162,8 +158,86 @@ const ChatLists: React.FC = () => {
         }
       );
 
+      const subscriptionChatList = stompClient.subscribe(
+        `/queue/chatroom/list/${nickname}`,
+        (message) => {
+          try {
+            console.log("Subscription callback triggered");
+            const receivedMessage = JSON.parse(message.body);
+            const chatRoomId = receivedMessage.chatRoomId
+              ? receivedMessage.chatRoomId
+              : roomId;
+            const roomName = receivedMessage.roomName;
+            const userInfo = receivedMessage.userInfo;
+            const createAt = receivedMessage.createAt;
+            const type = receivedMessage.type;
+            const newRecentMessage =
+              type === "FILE"
+                ? `${receivedMessage.senderName}님이 사진을 보냈습니다.`
+                : receivedMessage.message;
+
+            console.log(receivedMessage);
+            console.log(chatRooms);
+
+            setChatRooms((prevRooms) => {
+              const existingRoom = prevRooms.find((room) => room.chatRoomId === chatRoomId);
+              console.log("exstingRoom", existingRoom);
+              if (existingRoom) {
+                // 기존 방 제거
+                return prevRooms.filter((room) => room.chatRoomId !== chatRoomId);
+              } else {
+                // 새로운 방 추가
+                const newRoom = {
+                  chatRoomId,
+                  notificationCount: receivedMessage.senderName === nickname ? 0 : 1,
+                  recentMessage: newRecentMessage,
+                  createAt: createAt,
+                  // ChatRoom 타입에 필요한 추가 필드 초기화
+                  roomName: roomName,
+                  roomTitle: roomName,
+                  userInfo: userInfo,  // 예시로 빈 배열로 설정
+                  type: receivedMessage.type || "GENERAL",
+                  userCount: receivedMessage.userCount || 0,
+                  fix: receivedMessage.fix || false,
+                  // 나머지 필드도 초기화 필요 시 추가
+                };
+                return [...prevRooms, newRoom];
+              }
+            });
+
+            setFilteredRooms((prevRooms) => {
+              const existingRoom = prevRooms.find((room) => room.chatRoomId === chatRoomId);
+              console.log("filter-exstingRoom", existingRoom);
+              if (existingRoom) {
+
+                return prevRooms.filter((room) => room.chatRoomId !== chatRoomId);
+              } else {
+                const newRoom = {
+                  chatRoomId,
+                  notificationCount: receivedMessage.senderName === nickname ? 0 : 1,
+                  recentMessage: newRecentMessage,
+                  createAt: createAt,
+                  // ChatRoom 타입에 필요한 추가 필드 초기화
+                  roomName: roomName,
+                  roomTitle: roomName,
+                  userInfo: userInfo,
+                  type: receivedMessage.type || "GENERAL",
+                  userCount: receivedMessage.userCount || 0,
+                  fix: receivedMessage.fix || false,
+                };
+                return [...prevRooms, newRoom];
+              }
+            });
+
+          } catch (error) {
+            console.error("Error in subscription callback:", error);
+          }
+        }
+      );
+
       return () => {
         subscription.unsubscribe();
+        subscriptionChatList.unsubscribe();
       };
     };
 
@@ -176,6 +250,10 @@ const ChatLists: React.FC = () => {
     roomName: string,
     userInfo: UserInfo[]
   ) => {
+    if (!chatRoomId) {
+      console.error("chatRoomId가 정의되지 않았습니다.");
+      return;
+    }
     setSelectedChatRoomId(chatRoomId);
     dispatch(setCurrentChat(chatRoomId.toString()));
     navigate(`/chat/${loginId}/${chatRoomId}`, {
@@ -287,21 +365,21 @@ const ChatLists: React.FC = () => {
           params: { loginId },
         });
 
-        // roomName과 roomTitle 설정 후 채팅방 목록 업데이트
-        const roomsWithNames = updatedRooms.data.map((room: ChatRoom) => {
-          const roomName = room.userInfo
-            .map((user) => user.nickname)
-            .join(", ");
-          const roomTitle =
-            room.userInfo
-              .filter((user) => user.nickname !== nickname)
-              .map((user) => user.nickname)
-              .join(", ") || "채팅방";
-          return { ...room, roomName, roomTitle };
-        });
+        // // roomName과 roomTitle 설정 후 채팅방 목록 업데이트
+        // const roomsWithNames = updatedRooms.data.map((room: ChatRoom) => {
+        //   const roomName = room.userInfo
+        //     .map((user) => user.nickname)
+        //     .join(", ");
+        //   const roomTitle =
+        //     room.userInfo
+        //       .filter((user) => user.nickname !== nickname)
+        //       .map((user) => user.nickname)
+        //       .join(", ") || "채팅방";
+        //   return { ...room, roomName, roomTitle };
+        // });
 
-        setChatRooms(roomsWithNames);
-        setFilteredRooms(roomsWithNames);
+        // setChatRooms(roomsWithNames);
+        // setFilteredRooms(roomsWithNames);
       } else {
         console.error("채팅방 생성 실패, 상태 코드:", response.status);
       }
@@ -339,8 +417,8 @@ const ChatLists: React.FC = () => {
             (e.currentTarget.style.backgroundColor = "#333333")
           }
           onMouseLeave={(e) =>
-            (e.currentTarget.style.backgroundColor =
-              selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
+          (e.currentTarget.style.backgroundColor =
+            selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
           }
         >
           <Box sx={styles.profileContainer}>

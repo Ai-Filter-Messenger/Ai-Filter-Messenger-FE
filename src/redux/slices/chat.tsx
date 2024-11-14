@@ -47,6 +47,7 @@ export interface ChatState {
   typing: Record<string, any>;
   isLoading: boolean;
   error: string | null;
+  generalMessages: ChatRoom[];
 }
 
 const initialState: ChatState = {
@@ -56,6 +57,7 @@ const initialState: ChatState = {
   typing: {},
   isLoading: false,
   error: null,
+  generalMessages: [],
 };
 
 // 채팅방 리스트를 불러오는 비동기 액션 생성
@@ -149,6 +151,10 @@ const slice = createSlice({
         );
       }
     },
+    addGeneralMessage(state, action: PayloadAction<ChatRoom>) {
+      state.generalMessages = state.generalMessages || []; // 일반 메시지 상태 초기화
+      state.generalMessages.push(action.payload); // 새로운 GENERAL 메시지 추가
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -222,6 +228,7 @@ export const {
   updateTyping,
   removeMessageSuccess,
   updateChatRoomName,
+  addGeneralMessage,
 } = slice.actions;
 
 // WebSocket 연결 시작

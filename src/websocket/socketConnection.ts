@@ -6,6 +6,7 @@ import {
   removeMessageSuccess,
   addNewConversation,
   updateChatRoomName,
+  addGeneralMessage,
 } from "@/redux/slices/chat";
 import { store } from "@/redux/store"; // Redux store 직접 참조
 import { updateTypingStatus } from "@/redux/slices/chatbackup";
@@ -31,6 +32,7 @@ export const connectWebSocket = (token: string, chatRoomId: string) => {
       isConnected = true; // 연결 상태 업데이트
       subscribeToPrivateMessages(token, nickname); // 유저 전용 메시지 구독
       subscribeToChatRoom(chatRoomId); // 특정 채팅방 구독
+      subscribeToPrivateMessagesChatRoom(token, nickname);
     },
     (error: any) => {
       console.error("WebSocket 연결 실패", error);
@@ -60,9 +62,17 @@ const attemptReconnect = (token: string, chatRoomId: string) => {
 };
 
 // 유저 전용 메시지 구독
-const subscribeToPrivateMessages = (token: string , nickname : string | null) => {
+const subscribeToPrivateMessages = (token: string, nickname: string | null) => {
   if (stompClient) {
     stompClient.subscribe(`/queue/chatroom/${nickname}`, (message) => {
+      handleIncomingMessage(JSON.parse(message.body));
+    });
+  }
+};
+
+const subscribeToPrivateMessagesChatRoom = (token: string, nickname: string | null) => {
+  if (stompClient) {
+    stompClient.subscribe(`/queue/chatroom/list/${nickname}`, (message) => {
       handleIncomingMessage(JSON.parse(message.body));
     });
   }
@@ -81,6 +91,7 @@ export const subscribeToChatRoom = (chatRoomId: string) => {
 // 유저에게 전송된 메시지 처리 함수
 const handleIncomingMessage = (message: any) => {
   const dispatch = store.dispatch;
+  console.log(message);
 
   switch (message.type) {
     case "MESSAGE":
@@ -136,6 +147,14 @@ const handleIncomingMessage = (message: any) => {
         })
       );
       console.log("메시지가 삭제되었습니다:", message.messageId);
+      break;
+    case "GENERAL":
+      dispatch(addGeneralMessage(message));
+      console.log("일반 채팅방 생성:", message);
+      break;
+    case "OPEN":
+      dispatch(addGeneralMessage(message));
+      console.log("오픈 채팅방 생성:", message);
       break;
     case "ERROR":
       console.error("에러:", message.content);
