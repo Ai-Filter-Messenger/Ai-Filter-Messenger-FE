@@ -81,14 +81,16 @@ interface UserInfo {
 
 const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate(); // navigate 훅 추가
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]); // chatRooms 상태 추가
-  const [filteredRooms, setFilteredRooms] = useState<ChatRoom[]>([]); // filteredRooms 상태 추가
+  const navigate = useNavigate();
+  const { user, token } = useSelector((state: RootState) => state.auth);
+  const loginId = user?.loginId;
+  const nickname = user?.nickname;
+
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [filteredRooms, setFilteredRooms] = useState<ChatRoom[]>([]);
   const [selectedChatRoomId, setSelectedChatRoomId] = useState<number | null>(
     null
-  ); // selectedChatRoomId 상태 추가
-  const { user, token } = useSelector((state: RootState) => state.auth); // user와 token 가져오기
-  const loginId = user?.loginId; // loginId 설정
+  );
   const { currentConversation, conversations } = useSelector(
     (state: RootState) => state.chat
   );
@@ -96,8 +98,18 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
-  const roomName = location.state?.roomName || "채팅방";
   const userInfo = location.state?.userInfo || [];
+
+  // 모든 참여자의 닉네임을 나열하여 roomName 생성
+  const roomName = userInfo.map((u: UserInfo) => u.nickname).join(", ");
+
+  // 화면에 표시될 때는 로그인한 유저의 닉네임을 제외하고 나머지 유저의 닉네임을 나열하여 roomTitle 생성
+  const roomTitle =
+    userInfo
+      .filter((u: UserInfo) => u.nickname !== nickname)
+      .map((u: UserInfo) => u.nickname)
+      .join(", ") || "채팅방";
+
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -300,7 +312,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
       {/* 상단 - 참여자 목록 */}
       <Box sx={styles.topBar}>
         <Typography variant="h6" sx={{ color: "#fff" }}>
-          {roomName}
+          {roomTitle}
         </Typography>
         <Box sx={styles.icons}>
           <IconButton sx={styles.iconButton}>

@@ -29,6 +29,7 @@ interface ChatRoom {
   chatRoomId: number;
   type: string;
   roomName: string;
+  roomTitle: string;
   userInfo: UserInfo[];
   userCount: number;
   recentMessage: string;
@@ -65,8 +66,22 @@ const ChatLists: React.FC = () => {
           },
           params: { loginId },
         });
-        setChatRooms(response.data);
-        setFilteredRooms(response.data);
+
+        // Update roomName and roomTitle for each room
+        const updatedRooms = response.data.map((room: ChatRoom) => {
+          const roomName = room.userInfo
+            .map((user) => user.nickname)
+            .join(", ");
+          const roomTitle =
+            room.userInfo
+              .filter((user) => user.nickname !== nickname)
+              .map((user) => user.nickname)
+              .join(", ") || "채팅방";
+          return { ...room, roomName, roomTitle };
+        });
+
+        setChatRooms(updatedRooms);
+        setFilteredRooms(updatedRooms);
       } catch (error) {
         console.error("Failed to fetch chat rooms:", error);
       }
@@ -75,7 +90,7 @@ const ChatLists: React.FC = () => {
     if (token && loginId) {
       fetchChatRooms();
     }
-  }, [loginId, token]);
+  }, [loginId, token, nickname]);
 
   // WebSocket을 통해 새 메시지를 수신할 때 알림 카운트를 업데이트하는 함수
   useEffect(() => {
@@ -241,58 +256,57 @@ const ChatLists: React.FC = () => {
 
   const handleCreateRoom = async () => {
     try {
-      const defaultRoomName =
-        selectedFriends.length > 0
-          ? selectedFriends.join(", ")
-          : nickname || "Default Room";
-      const roomName = defaultRoomName; // roomName이 빈 문자열이 되지 않도록 설정
-      const participants = [...selectedFriends];
+      const roomName = [nickname, ...selectedFriends].join(", ");
+      const roomTitle = selectedFriends.join(", ") || "채팅방"; // roomName에서 로그인한 유저 제외
 
       const response = await axios.post(
-        "/chat/create", // API 엔드포인트 확인 필요
+        "/chat/create",
         {
           loginId,
-          roomName: roomName, // 유효한 roomName 사용
+          roomName: roomName,
           nicknames: selectedFriends,
           type: chatRoomType,
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`, // 올바른 토큰 포함
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         }
       );
 
-      console.log("Sending request to create chat room:", {
-        loginId,
-        roomName,
-        nicknames: selectedFriends,
-        type: chatRoomType,
-      });
-
       if (response.status === 200) {
-        alert("Chat room created successfully!");
+        alert("채팅방이 성공적으로 생성되었습니다!");
         setIsModalOpen(false);
 
         // 채팅방 목록 새로고침
         const updatedRooms = await axios.get("/chat/find/list", {
           headers: {
-            Authorization: `Bearer ${token}`, // 토큰 포함
+            Authorization: `Bearer ${token}`,
           },
           params: { loginId },
         });
 
-        setChatRooms(updatedRooms.data);
-        setFilteredRooms(updatedRooms.data);
+        // roomName과 roomTitle 설정 후 채팅방 목록 업데이트
+        const roomsWithNames = updatedRooms.data.map((room: ChatRoom) => {
+          const roomName = room.userInfo
+            .map((user) => user.nickname)
+            .join(", ");
+          const roomTitle =
+            room.userInfo
+              .filter((user) => user.nickname !== nickname)
+              .map((user) => user.nickname)
+              .join(", ") || "채팅방";
+          return { ...room, roomName, roomTitle };
+        });
+
+        setChatRooms(roomsWithNames);
+        setFilteredRooms(roomsWithNames);
       } else {
-        console.error(
-          "Failed to create chat room, status code:",
-          response.status
-        );
+        console.error("채팅방 생성 실패, 상태 코드:", response.status);
       }
     } catch (error) {
-      console.error("Failed to create chat room:", error);
+      console.error("채팅방 생성 실패:", error);
     }
   };
 
@@ -334,7 +348,7 @@ const ChatLists: React.FC = () => {
           </Box>
           <Box sx={styles.chatDetails}>
             <Typography variant="body1" sx={styles.roomName}>
-              {room.roomName}({room.userCount})
+              {room.roomTitle}({room.userCount})
             </Typography>
             <Typography variant="body2" sx={styles.lastMessage}>
               {room.recentMessage}
