@@ -237,8 +237,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   }, [chatRoomId, stompClient]);
 
   const getUserAvatar = (senderName: string) => {
-    console.log(senderName);
-    console.log(userInfo);
     const user = userInfo.find((u: UserInfo) => u.nickname === senderName);
     return user?.profileImageUrl || ""; // 프로필 이미지 URL 반환
   };
