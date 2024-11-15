@@ -29,6 +29,7 @@ interface ChatRoom {
   chatRoomId: number;
   type: string;
   roomName: string;
+  customRoomName: any;
   roomTitle: string;
   userInfo: UserInfo[];
   userCount: number;
@@ -48,6 +49,8 @@ const ChatLists: React.FC = () => {
   const [selectedChatRoomId, setSelectedChatRoomId] = useState<number | null>(
     null
   );
+  const [customRoomName, setCustomRoomName] = useState<string>("");
+  const [useCustomRoomName, setUseCustomRoomName] = useState<boolean>(false);
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -67,13 +70,18 @@ const ChatLists: React.FC = () => {
           params: { loginId },
         });
 
-        // Update roomName and roomTitle for each room
         const updatedRooms = response.data.map((room: ChatRoom) => {
-          const roomName = room.userInfo
-            .map((user) => user.nickname)
-            .join(", ");
-          const roomTitle = room.roomName;
-          return { ...room, roomName, roomTitle };
+          const roomTitle = room.customRoomName
+            ? room.customRoomName // 사용자 정의 채팅방 이름이 있을 경우
+            : room.userInfo // 없을 경우 참여자 목록에서 로그인한 유저 제외
+                .filter((user) => user.nickname !== nickname)
+                .map((user) => user.nickname)
+                .join(", ");
+
+          return {
+            ...room,
+            roomTitle, // 화면에 표시될 제목
+          };
         });
 
         setChatRooms(updatedRooms);
@@ -135,6 +143,7 @@ const ChatLists: React.FC = () => {
                         : room.notificationCount + 1,
                   recentMessage: newRecentMessage,
                   createAt: createAt,
+                  customRoomName: room.customRoomName || "", // 필드 추가
                 };
               }
               return room;
@@ -184,41 +193,50 @@ const ChatLists: React.FC = () => {
             console.log(chatRooms);
 
             setChatRooms((prevRooms) => {
-              const existingRoom = prevRooms.find((room) => room.chatRoomId === chatRoomId);
+              const existingRoom = prevRooms.find(
+                (room) => room.chatRoomId === chatRoomId
+              );
               console.log("exstingRoom", existingRoom);
               if (existingRoom) {
                 // 기존 방 제거
-                return prevRooms.filter((room) => room.chatRoomId !== chatRoomId);
+                return prevRooms.filter(
+                  (room) => room.chatRoomId !== chatRoomId
+                );
               } else {
                 // 새로운 방 추가
                 const newRoom = {
                   chatRoomId,
-                  notificationCount: receivedMessage.senderName === nickname ? 0 : 1,
+                  notificationCount:
+                    receivedMessage.senderName === nickname ? 0 : 1,
                   recentMessage: newRecentMessage,
                   createAt: createAt,
                   // ChatRoom 타입에 필요한 추가 필드 초기화
                   roomName: roomName,
                   roomTitle: roomName,
-                  userInfo: userInfo,  // 예시로 빈 배열로 설정
+                  userInfo: userInfo, // 예시로 빈 배열로 설정
                   type: receivedMessage.type || "GENERAL",
                   userCount: receivedMessage.userCount || 0,
                   fix: receivedMessage.fix || false,
-                  // 나머지 필드도 초기화 필요 시 추가
+                  customRoomName: receivedMessage.customRoomName || "", // 필드 추가
                 };
                 return [...prevRooms, newRoom];
               }
             });
 
             setFilteredRooms((prevRooms) => {
-              const existingRoom = prevRooms.find((room) => room.chatRoomId === chatRoomId);
+              const existingRoom = prevRooms.find(
+                (room) => room.chatRoomId === chatRoomId
+              );
               console.log("filter-exstingRoom", existingRoom);
               if (existingRoom) {
-
-                return prevRooms.filter((room) => room.chatRoomId !== chatRoomId);
+                return prevRooms.filter(
+                  (room) => room.chatRoomId !== chatRoomId
+                );
               } else {
                 const newRoom = {
                   chatRoomId,
-                  notificationCount: receivedMessage.senderName === nickname ? 0 : 1,
+                  notificationCount:
+                    receivedMessage.senderName === nickname ? 0 : 1,
                   recentMessage: newRecentMessage,
                   createAt: createAt,
                   // ChatRoom 타입에 필요한 추가 필드 초기화
@@ -228,11 +246,11 @@ const ChatLists: React.FC = () => {
                   type: receivedMessage.type || "GENERAL",
                   userCount: receivedMessage.userCount || 0,
                   fix: receivedMessage.fix || false,
+                  customRoomName: receivedMessage.customRoomName || "", // 필드 추가
                 };
                 return [...prevRooms, newRoom];
               }
             });
-
           } catch (error) {
             console.error("Error in subscription callback:", error);
           }
@@ -338,8 +356,10 @@ const ChatLists: React.FC = () => {
 
   const handleCreateRoom = async () => {
     try {
-      const roomName = [nickname, ...selectedFriends].join(", ");
-      const roomTitle = selectedFriends.join(", ") || "채팅방"; // roomName에서 로그인한 유저 제외
+      const roomName = useCustomRoomName
+        ? customRoomName // 사용자 정의 이름이 있으면 사용
+        : [nickname, ...selectedFriends].join(", "); // 없으면 참여자 목록 나열
+      const roomTitle = selectedFriends.join(", ") || "채팅방"; // roomName에서 로그인한 유저 제외 ***
       const chatRoomImage = chatRoomType === "OPEN" ? "open" : "";
 
       const response = await axios.post(
@@ -349,6 +369,7 @@ const ChatLists: React.FC = () => {
           roomName: roomName,
           nicknames: selectedFriends,
           type: chatRoomType,
+          customRoomName: useCustomRoomName, // 사용자 정의 이름 여부 전송
           chatRoomImage: chatRoomImage,
         },
         {
@@ -362,6 +383,9 @@ const ChatLists: React.FC = () => {
       if (response.status === 200) {
         alert("채팅방이 성공적으로 생성되었습니다!");
         setIsModalOpen(false);
+        setCustomRoomName(""); // 채팅방 이름 입력 초기화
+        setSelectedFriends([]); // 친구 목록 초기화
+        setUseCustomRoomName(false); // 사용자 정의 이름 사용 여부 초기화
 
         // 채팅방 목록 새로고침
         const updatedRooms = await axios.get("/chat/find/list", {
@@ -370,22 +394,6 @@ const ChatLists: React.FC = () => {
           },
           params: { loginId },
         });
-
-        // // roomName과 roomTitle 설정 후 채팅방 목록 업데이트
-        // const roomsWithNames = updatedRooms.data.map((room: ChatRoom) => {
-        //   const roomName = room.userInfo
-        //     .map((user) => user.nickname)
-        //     .join(", ");
-        //   const roomTitle =
-        //     room.userInfo
-        //       .filter((user) => user.nickname !== nickname)
-        //       .map((user) => user.nickname)
-        //       .join(", ") || "채팅방";
-        //   return { ...room, roomName, roomTitle };
-        // });
-
-        // setChatRooms(roomsWithNames);
-        // setFilteredRooms(roomsWithNames);
       } else {
         console.error("채팅방 생성 실패, 상태 코드:", response.status);
       }
@@ -419,14 +427,14 @@ const ChatLists: React.FC = () => {
                 : {}),
             }}
             onClick={() =>
-              handleRoomClick(room.chatRoomId, room.roomName, room.userInfo)
+              handleRoomClick(room.chatRoomId, room.roomTitle, room.userInfo)
             }
             onMouseEnter={(e) =>
               (e.currentTarget.style.backgroundColor = "#333333")
             }
             onMouseLeave={(e) =>
-            (e.currentTarget.style.backgroundColor =
-              selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
+              (e.currentTarget.style.backgroundColor =
+                selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
             }
           >
             <Box sx={styles.profileContainer}>
@@ -440,9 +448,16 @@ const ChatLists: React.FC = () => {
                 {room.recentMessage}
               </Typography>
             </Box>
-            <Box sx={styles.chatMeta} display="flex" flexDirection="column" alignItems="center">
+            <Box
+              sx={styles.chatMeta}
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+            >
               {room.fix && (
-                <FaThumbtack style={{ fontSize: '12px', marginBottom: '15px' }} /> // 핀 아이콘을 시간 위로 배치
+                <FaThumbtack
+                  style={{ fontSize: "12px", marginBottom: "15px" }}
+                /> // 핀 아이콘을 시간 위로 배치
               )}
               <Typography variant="caption" sx={styles.messageTime}>
                 {new Date(room.createAt).toLocaleTimeString([], {
@@ -468,6 +483,22 @@ const ChatLists: React.FC = () => {
       >
         <Box sx={styles.modalContent}>
           <Typography variant="h6">새 채팅방 만들기</Typography>
+
+          <TextField
+            label="채팅방 이름 지정"
+            value={customRoomName}
+            onChange={(e) => setCustomRoomName(e.target.value)}
+            sx={styles.textField}
+            disabled={!useCustomRoomName} // customRoomName 옵션이 꺼져있으면 비활성화
+          />
+
+          <Button
+            variant={useCustomRoomName ? "contained" : "outlined"}
+            onClick={() => setUseCustomRoomName(!useCustomRoomName)}
+            sx={{ marginBottom: "1rem" }}
+          >
+            {useCustomRoomName ? "이름 지정 취소" : "이름 지정하기"}
+          </Button>
 
           <TextField
             select
@@ -553,19 +584,19 @@ const styles = {
     flexDirection: "row",
   },
   avatarOverlap: {
-    width: '30px', // 아바타 크기 조정
-    height: '30px',
-    borderRadius: '50%',
-    marginLeft: '-15px', // 겹침을 더 강하게 하기 위해 음수 값 사용
-    border: '2px solid #333', // 경계선 추가 (선택 사항)
+    width: "30px", // 아바타 크기 조정
+    height: "30px",
+    borderRadius: "50%",
+    marginLeft: "-15px", // 겹침을 더 강하게 하기 위해 음수 값 사용
+    border: "2px solid #333", // 경계선 추가 (선택 사항)
   },
   moreAvatar: {
-    width: '30px',
-    height: '30px',
-    borderRadius: '50%',
-    backgroundColor: '#666',
-    fontSize: '12px',
-    marginLeft: '-15px', // 겹침 효과 동일하게 적용
+    width: "30px",
+    height: "30px",
+    borderRadius: "50%",
+    backgroundColor: "#666",
+    fontSize: "12px",
+    marginLeft: "-15px", // 겹침 효과 동일하게 적용
   },
   chatDetails: {
     flex: 1,
