@@ -128,9 +128,11 @@ const ChatLists: React.FC = () => {
                 return {
                   ...room,
                   notificationCount:
-                    receivedMessage.senderName === nickname
-                      ? room.notificationCount // 유지
-                      : room.notificationCount + 1,
+                    room.chatRoomId === selectedChatRoomId
+                      ? 0 // 현재 보고 있는 채팅방이면 notificationCount를 0으로 설정
+                      : receivedMessage.senderName === nickname
+                        ? room.notificationCount // 유지
+                        : room.notificationCount + 1,
                   recentMessage: newRecentMessage,
                   createAt: createAt,
                 };
@@ -138,16 +140,18 @@ const ChatLists: React.FC = () => {
               return room;
             });
           });
-
+          console.log("selectedChatRoomId :", selectedChatRoomId);
           setFilteredRooms((prevRooms) =>
             prevRooms.map((room) => {
               if (room.chatRoomId === chatRoomId) {
                 return {
                   ...room,
                   notificationCount:
-                    receivedMessage.senderName === nickname
-                      ? room.notificationCount // 유지
-                      : room.notificationCount + 1,
+                    room.chatRoomId === selectedChatRoomId
+                      ? 0 // 현재 보고 있는 채팅방이면 notificationCount를 0으로 설정
+                      : receivedMessage.senderName === nickname
+                        ? room.notificationCount // 유지
+                        : room.notificationCount + 1,
                   recentMessage: newRecentMessage,
                   createAt: createAt,
                 };
