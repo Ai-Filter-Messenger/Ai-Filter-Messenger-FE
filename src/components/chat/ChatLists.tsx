@@ -340,6 +340,7 @@ const ChatLists: React.FC = () => {
     try {
       const roomName = [nickname, ...selectedFriends].join(", ");
       const roomTitle = selectedFriends.join(", ") || "채팅방"; // roomName에서 로그인한 유저 제외
+      const chatRoomImage = chatRoomType === "OPEN" ? "open" : "";
 
       const response = await axios.post(
         "/chat/create",
@@ -348,6 +349,7 @@ const ChatLists: React.FC = () => {
           roomName: roomName,
           nicknames: selectedFriends,
           type: chatRoomType,
+          chatRoomImage: chatRoomImage,
         },
         {
           headers: {
