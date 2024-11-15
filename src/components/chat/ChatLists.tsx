@@ -401,57 +401,59 @@ const ChatLists: React.FC = () => {
 
       <SearchBar onSearch={handleSearch} />
 
-      {chatRooms.map((room) => (
-        <Box
-          key={room.chatRoomId}
-          sx={{
-            ...styles.chatRoom,
-            ...(selectedChatRoomId === room.chatRoomId
-              ? styles.selectedChatRoom
-              : {}),
-          }}
-          onClick={() =>
-            handleRoomClick(room.chatRoomId, room.roomName, room.userInfo)
-          }
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.backgroundColor = "#333333")
-          }
-          onMouseLeave={(e) =>
-          (e.currentTarget.style.backgroundColor =
-            selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
-          }
-        >
-          <Box sx={styles.profileContainer}>
-            {renderProfileImages(room.userInfo, room.userCount)}
+      {[...chatRooms]
+        .sort((a, b) => (b.fix === a.fix ? 0 : b.fix ? 1 : -1)) // room.fix가 true인 항목을 위로 정렬
+        .map((room) => (
+          <Box
+            key={room.chatRoomId}
+            sx={{
+              ...styles.chatRoom,
+              ...(selectedChatRoomId === room.chatRoomId
+                ? styles.selectedChatRoom
+                : {}),
+            }}
+            onClick={() =>
+              handleRoomClick(room.chatRoomId, room.roomName, room.userInfo)
+            }
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor = "#333333")
+            }
+            onMouseLeave={(e) =>
+            (e.currentTarget.style.backgroundColor =
+              selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
+            }
+          >
+            <Box sx={styles.profileContainer}>
+              {renderProfileImages(room.userInfo, room.userCount)}
+            </Box>
+            <Box sx={styles.chatDetails}>
+              <Typography variant="body1" sx={styles.roomName}>
+                {room.roomTitle} ({room.userCount})
+              </Typography>
+              <Typography variant="body2" sx={styles.lastMessage}>
+                {room.recentMessage}
+              </Typography>
+            </Box>
+            <Box sx={styles.chatMeta} display="flex" flexDirection="column" alignItems="center">
+              {room.fix && (
+                <FaThumbtack style={{ fontSize: '12px', marginBottom: '15px' }} /> // 핀 아이콘을 시간 위로 배치
+              )}
+              <Typography variant="caption" sx={styles.messageTime}>
+                {new Date(room.createAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Typography>
+              {room.notificationCount > 0 && (
+                <Badge
+                  badgeContent={room.notificationCount}
+                  color="primary"
+                  sx={styles.unreadBadge}
+                />
+              )}
+            </Box>
           </Box>
-          <Box sx={styles.chatDetails}>
-            <Typography variant="body1" sx={styles.roomName}>
-              {room.roomTitle} ({room.userCount})
-            </Typography>
-            <Typography variant="body2" sx={styles.lastMessage}>
-              {room.recentMessage}
-            </Typography>
-          </Box>
-          <Box sx={styles.chatMeta} display="flex" flexDirection="column" alignItems="center">
-            {room.fix && (
-              <FaThumbtack style={{ fontSize: '12px', marginBottom: '15px' }} /> // 핀 아이콘을 시간 위로 배치
-            )}
-            <Typography variant="caption" sx={styles.messageTime}>
-              {new Date(room.createAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </Typography>
-            {room.notificationCount > 0 && (
-              <Badge
-                badgeContent={room.notificationCount}
-                color="primary"
-                sx={styles.unreadBadge}
-              />
-            )}
-          </Box>
-        </Box>
-      ))}
+        ))}
 
       <Modal
         open={isModalOpen}

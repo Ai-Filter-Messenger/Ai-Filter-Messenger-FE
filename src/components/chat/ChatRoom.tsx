@@ -237,6 +237,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   }, [chatRoomId, stompClient]);
 
   const getUserAvatar = (senderName: string) => {
+    console.log(senderName);
+    console.log(userInfo);
     const user = userInfo.find((u: UserInfo) => u.nickname === senderName);
     return user?.profileImageUrl || ""; // 프로필 이미지 URL 반환
   };
@@ -382,18 +384,30 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
       {/* 채팅 메시지 리스트 */}
       <Box sx={styles.messageContainer} ref={messageContainerRef}>
-        {messages?.map((msg) => (
-          <Box
-            key={msg.id}
-            sx={{
-              ...styles.messageRow,
-              flexDirection:
-                msg.senderName === user.name ? "row-reverse" : "row",
-            }}
-          >
-            {/* 상대방의 메시지일 경우 아바타와 이름 표시 */}
-            {msg.senderName !== user.name &&
-              (msg.type === "MESSAGE" || msg.type === "FILE") && (
+        {messages?.map((msg, index) => {
+          const isFirstInGroup =
+            index === 0 || // 첫 번째 메시지일 때 true
+            formatDate(msg.createAt) !== formatDate(messages[index - 1].createAt) ||
+            msg.senderName !== messages[index - 1].senderName;
+
+          const isLastInGroup =
+            index === messages.length - 1 ||
+            formatDate(msg.createAt) !== formatDate(messages[index + 1].createAt) ||
+            msg.senderName !== messages[index + 1].senderName;
+
+          return (
+            <Box
+              key={msg.id}
+              sx={{
+                ...styles.messageRow,
+                flexDirection:
+                  msg.senderName === user.name ? "row-reverse" : "row",
+                marginBottom: isLastInGroup ? "5px" : isFirstInGroup ? "-10px" : "0px",
+              }}
+            >
+              {/* Show avatar, name, and timestamp only if this is the first message in a group */}
+              {isFirstInGroup && msg.senderName !== user.name &&
+                (msg.type === "MESSAGE" || msg.type === "FILE") ? (
                 <Box sx={styles.senderInfo}>
                   <Avatar
                     sx={styles.messageAvatar}
@@ -406,48 +420,55 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                     </Typography>
                   </Box>
                 </Box>
-              )}
-            <Box
-              sx={{
-                ...styles.messageBox,
-                backgroundColor:
-                  msg.type !== "MESSAGE" && msg.type !== "FILE"
-                    ? "#9669ad"
-                    : msg.senderName === user.name
-                      ? "#615ef1"
-                      : "#3b4654",
-                alignSelf:
-                  msg.type !== "MESSAGE" && msg.type !== "FILE"
-                    ? "center"
-                    : msg.senderName === user.name
-                      ? "flex-end"
-                      : "flex-start",
-                margin:
-                  msg.type !== "MESSAGE" && msg.type !== "FILE" ? "0 auto" : "",
-              }}
-            >
-              {msg.type === "FILE" ? (
-                <img
-                  src={msg.message}
-                  alt="Uploaded file"
-                  onLoad={scrollToBottom}
-                  style={{
-                    maxWidth: "400px",
-                    maxHeight: "300px",
-                    borderRadius: "8px",
-                  }}
-                />
               ) : (
-                <Typography sx={styles.messageText}>{msg.message}</Typography>
+                <Box sx={{ width: "38px" }} /> // empty space for alignment
+              )}
+
+              <Box
+                sx={{
+                  ...styles.messageBox,
+                  backgroundColor:
+                    msg.type !== "MESSAGE" && msg.type !== "FILE"
+                      ? "rgba(87, 83, 89, 0.3)" // 50% 투명도
+                      : msg.senderName === user.name
+                        ? "#615ef1"
+                        : "#3b4654",
+                  alignSelf:
+                    msg.type !== "MESSAGE" && msg.type !== "FILE"
+                      ? "center"
+                      : msg.senderName === user.name
+                        ? "flex-end"
+                        : "flex-start",
+                  margin:
+                    msg.type !== "MESSAGE" && msg.type !== "FILE" ? "0 auto" : "",
+                  marginBottom: isLastInGroup ? "5px" : isFirstInGroup ? "10px" : "0px",
+                }}
+              >
+                {msg.type === "FILE" ? (
+                  <img
+                    src={msg.message}
+                    alt="Uploaded file"
+                    onLoad={scrollToBottom}
+                    style={{
+                      maxWidth: "400px",
+                      maxHeight: "300px",
+                      borderRadius: "8px",
+                    }}
+                  />
+                ) : (
+                  <Typography sx={styles.messageText}>{msg.message}</Typography>
+                )}
+              </Box>
+
+              {/* Show timestamp only for the first message in a group */}
+              {isLastInGroup && (msg.type === "MESSAGE" || msg.type === "FILE") && (
+                <Typography sx={styles.timestamp}>
+                  {formatDate(msg.createAt)}
+                </Typography>
               )}
             </Box>
-            {(msg.type === "MESSAGE" || msg.type === "FILE") && (
-              <Typography sx={styles.timestamp}>
-                {formatDate(msg.createAt)}
-              </Typography>
-            )}
-          </Box>
-        ))}
+          );
+        })}
       </Box>
 
       {/* 하단 - 메시지 입력창 */}
