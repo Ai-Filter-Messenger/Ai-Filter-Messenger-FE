@@ -72,11 +72,19 @@ const ChatLists: React.FC = () => {
 
         const updatedRooms = response.data.map((room: ChatRoom) => {
           const roomTitle = room.customRoomName
-            ? room.customRoomName // 사용자 정의 채팅방 이름이 있을 경우
-            : room.userInfo // 없을 경우 참여자 목록에서 로그인한 유저 제외
-                .filter((user) => user.nickname !== nickname)
-                .map((user) => user.nickname)
-                .join(", ");
+            ? room.customRoomName
+            : room.userInfo.length > 1 // userInfo가 비어있지 않을 때만 필터링
+              ? room.userInfo
+                  .filter((user) => {
+                    console.log("Filtering user:", user.nickname); // 필터링 확인
+                    return user.nickname !== nickname;
+                  })
+                  .map((user) => user.nickname)
+                  .join(", ")
+              : room.roomName; // 기본적으로 roomName을 사용
+
+          console.log("roomName:", room.roomName);
+          console.log("roomTitle:", roomTitle);
 
           return {
             ...room,
@@ -416,65 +424,72 @@ const ChatLists: React.FC = () => {
       <SearchBar onSearch={handleSearch} />
 
       {[...chatRooms]
-        .sort((a, b) => (b.fix === a.fix ? 0 : b.fix ? 1 : -1)) // room.fix가 true인 항목을 위로 정렬
-        .map((room) => (
-          <Box
-            key={room.chatRoomId}
-            sx={{
-              ...styles.chatRoom,
-              ...(selectedChatRoomId === room.chatRoomId
-                ? styles.selectedChatRoom
-                : {}),
-            }}
-            onClick={() =>
-              handleRoomClick(room.chatRoomId, room.roomTitle, room.userInfo)
-            }
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor = "#333333")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.backgroundColor =
-                selectedChatRoomId === room.chatRoomId ? "#333333" : "#1f1f1f")
-            }
-          >
-            <Box sx={styles.profileContainer}>
-              {renderProfileImages(room.userInfo, room.userCount)}
-            </Box>
-            <Box sx={styles.chatDetails}>
-              <Typography variant="body1" sx={styles.roomName}>
-                {room.roomTitle} ({room.userCount})
-              </Typography>
-              <Typography variant="body2" sx={styles.lastMessage}>
-                {room.recentMessage}
-              </Typography>
-            </Box>
+        .sort((a, b) => (b.fix === a.fix ? 0 : b.fix ? 1 : -1))
+        .map((room) => {
+          console.log("Rendering roomName:", room.roomName);
+          console.log("Rendering roomTitle:", room.roomTitle);
+
+          return (
             <Box
-              sx={styles.chatMeta}
-              display="flex"
-              flexDirection="column"
-              alignItems="center"
+              key={room.chatRoomId}
+              sx={{
+                ...styles.chatRoom,
+                ...(selectedChatRoomId === room.chatRoomId
+                  ? styles.selectedChatRoom
+                  : {}),
+              }}
+              onClick={() =>
+                handleRoomClick(room.chatRoomId, room.roomTitle, room.userInfo)
+              }
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "#333333")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor =
+                  selectedChatRoomId === room.chatRoomId
+                    ? "#333333"
+                    : "#1f1f1f")
+              }
             >
-              {room.fix && (
-                <FaThumbtack
-                  style={{ fontSize: "12px", marginBottom: "15px" }}
-                /> // 핀 아이콘을 시간 위로 배치
-              )}
-              <Typography variant="caption" sx={styles.messageTime}>
-                {new Date(room.createAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Typography>
-              {room.notificationCount > 0 && (
-                <Badge
-                  badgeContent={room.notificationCount}
-                  color="primary"
-                  sx={styles.unreadBadge}
-                />
-              )}
+              <Box sx={styles.profileContainer}>
+                {renderProfileImages(room.userInfo, room.userCount)}
+              </Box>
+              <Box sx={styles.chatDetails}>
+                <Typography variant="body1" sx={styles.roomName}>
+                  {room.roomTitle || room.roomName} ({room.userCount})
+                </Typography>
+                <Typography variant="body2" sx={styles.lastMessage}>
+                  {room.recentMessage}
+                </Typography>
+              </Box>
+              <Box
+                sx={styles.chatMeta}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+              >
+                {room.fix && (
+                  <FaThumbtack
+                    style={{ fontSize: "12px", marginBottom: "15px" }}
+                  />
+                )}
+                <Typography variant="caption" sx={styles.messageTime}>
+                  {new Date(room.createAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </Typography>
+                {room.notificationCount > 0 && (
+                  <Badge
+                    badgeContent={room.notificationCount}
+                    color="primary"
+                    sx={styles.unreadBadge}
+                  />
+                )}
+              </Box>
             </Box>
-          </Box>
-        ))}
+          );
+        })}
 
       <Modal
         open={isModalOpen}
@@ -489,7 +504,7 @@ const ChatLists: React.FC = () => {
             value={customRoomName}
             onChange={(e) => setCustomRoomName(e.target.value)}
             sx={styles.textField}
-            disabled={!useCustomRoomName} // customRoomName 옵션이 꺼져있으면 비활성화
+            disabled={!useCustomRoomName}
           />
 
           <Button
@@ -517,10 +532,9 @@ const ChatLists: React.FC = () => {
             onChange={(e) => setFriendSearch(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && friendSearch.trim()) {
-                // Enter 키가 눌렸고, friendSearch가 비어있지 않은 경우에만 추가
                 setSelectedFriends((prev) => [...prev, friendSearch.trim()]);
-                setFriendSearch(""); // 입력창 초기화
-                e.preventDefault(); // 기본 Enter 동작 방지 (ex. 폼 제출)
+                setFriendSearch("");
+                e.preventDefault();
               }
             }}
             sx={styles.textField}
@@ -584,11 +598,11 @@ const styles = {
     flexDirection: "row",
   },
   avatarOverlap: {
-    width: "30px", // 아바타 크기 조정
+    width: "30px",
     height: "30px",
     borderRadius: "50%",
-    marginLeft: "-15px", // 겹침을 더 강하게 하기 위해 음수 값 사용
-    border: "2px solid #333", // 경계선 추가 (선택 사항)
+    marginLeft: "-15px",
+    border: "2px solid #333",
   },
   moreAvatar: {
     width: "30px",
@@ -596,7 +610,7 @@ const styles = {
     borderRadius: "50%",
     backgroundColor: "#666",
     fontSize: "12px",
-    marginLeft: "-15px", // 겹침 효과 동일하게 적용
+    marginLeft: "-15px",
   },
   chatDetails: {
     flex: 1,
