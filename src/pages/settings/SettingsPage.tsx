@@ -2,20 +2,41 @@ import React from "react";
 import MainLayout from "@/layouts/main";
 import ProfileEdit from "@/components/user/ProfileEdit";
 import Account from "@/components/user/\bAccount";
+import { Typography } from "@mui/material";
 
 const SettingsPage = () => {
   return (
     <MainLayout
-      leftComponent={<h1>Settings</h1>} // 왼쪽: "Settings" 타이틀만 표시
+      leftComponent={
+        <Typography variant="h1" sx={styles.title}>
+          settings
+        </Typography>
+      }
       centerComponent={
         <>
-          <ProfileEdit /> {/* 유저 프로필 편집 컴포넌트 */}
-          <Account /> {/* 계정 정보 컴포넌트 */}
+          <Typography variant="h1" sx={styles.title}>
+            Profile
+          </Typography>
+          <ProfileEdit />
+          <Typography variant="h1" sx={styles.title}>
+            Account
+          </Typography>
+          <Account />
         </>
       }
       rightComponent={<></>}
     />
   );
+};
+
+const styles = {
+  title: {
+    marginTop: "1rem",
+    marginBottom: "1rem",
+    padding: "1rem", // 패딩 추가
+    fontWeight: "bold",
+    color: "#fff",
+  },
 };
 
 export default SettingsPage;
