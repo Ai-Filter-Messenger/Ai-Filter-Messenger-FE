@@ -115,6 +115,45 @@ const Contacts: React.FC<ContactsProps> = ({ onSelectUser }) => {
     }
   };
 
+  // const handleMessageClick = async (contact: User) => {
+  //   try {
+  //     const response = await axios.get(`${API_BASE_URL}/chat/find/list`, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+
+  //     const chatRooms = response.data;
+  //     const existingRoom = chatRooms.find((room: any) => {
+  //       const participants = room.userInfo.map((user: any) => user.nickname);
+  //       const isOneOnOneChat =
+  //         participants.length === 2 &&
+  //         participants.includes(contact.nickname) &&
+  //         participants.includes(localStorage.getItem("nickname") || "");
+
+  //       return isOneOnOneChat;
+  //     });
+
+  //     if (existingRoom) {
+  //       navigate(`/chat/${existingRoom.chatRoomId}`);
+  //     } else {
+  //       const createResponse = await axios.post(
+  //         `${API_BASE_URL}/chat/create`,
+  //         {
+  //           type: "GENERAL",
+  //           nicknames: [contact.nickname],
+  //         },
+  //         {
+  //           headers: { Authorization: `Bearer ${token}` },
+  //         }
+  //       );
+
+  //       const newRoomId = createResponse.data.chatRoomId;
+  //       navigate(`/chat/${newRoomId}`);
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to handle message click:", error);
+  //   }
+  // };
+
   // 팔로우/언팔로우 핸들러
   const handleFollowToggle = async (nickname: string, isFollowing: boolean) => {
     try {
@@ -168,7 +207,11 @@ const Contacts: React.FC<ContactsProps> = ({ onSelectUser }) => {
 
       {/* 연락처 리스트 */}
       {filteredContacts.map((contact) => (
-        <Box key={contact.id} sx={styles.contactItem}>
+        <Box
+          key={contact.id}
+          sx={styles.contactItem}
+          onClick={() => onSelectUser(contact)} // User selection
+        >
           <Avatar
             src={contact.profileImageUrl}
             alt={contact.nickname}

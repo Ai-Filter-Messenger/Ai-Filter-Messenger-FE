@@ -14,7 +14,7 @@ interface User {
   userRole: string;
 }
 
-const ContactsPage = () => {
+const ContactsPage: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const handleUserSelect = (user: User) => {
@@ -26,7 +26,7 @@ const ContactsPage = () => {
       leftComponent={<Contacts onSelectUser={handleUserSelect} />}
       centerComponent={
         selectedUser ? (
-          <UserProfile user={selectedUser} />
+          <UserProfile userId={selectedUser.id} />
         ) : (
           <p style={{ color: "#fff", textAlign: "center", marginTop: "1rem" }}>
             연락처를 선택해주세요.
