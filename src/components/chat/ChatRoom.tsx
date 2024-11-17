@@ -5,6 +5,7 @@ import axios from "@/utils/axios";
 import { stompClient } from "@/websocket/socketConnection";
 import {
   Box,
+  Button,
   IconButton,
   Typography,
   Avatar,
@@ -111,9 +112,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false); // 초대 모달 상태
+  const [inviteNickname, setInviteNickname] = useState<string>(""); // 초대할 유저 닉네임
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
+
+  const handleOpenInviteModal = () => setInviteModalOpen(true);
+  const handleCloseInviteModal = () => setInviteModalOpen(false);
 
   const handlePinChatRoom = async () => {
     console.log("채팅방 고정");
@@ -136,9 +142,36 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
     handleCloseModal();
   };
 
-  const handleInviteUser = () => {
-    console.log("초대하기");
-    handleCloseModal();
+  const handleInviteUser = async () => {
+    if (!chatRoomId || !inviteNickname.trim()) {
+      alert("채팅방 ID나 닉네임이 유효하지 않습니다.");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        "/chat/invite",
+        {
+          chatRoomId: Number(chatRoomId),
+          nicknames: [inviteNickname.trim()],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        alert(`${inviteNickname} 님이 초대되었습니다.`);
+        setInviteNickname(""); // 입력 필드 초기화
+        handleCloseInviteModal();
+      }
+    } catch (error) {
+      console.error("사용자 초대 실패:", error);
+      alert("사용자 초대에 실패했습니다.");
+    }
   };
 
   const handleLeaveChatRoom = async () => {
@@ -357,7 +390,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
             </ListItem>
             <ListItem
               component="button"
-              onClick={handleInviteUser}
+              onClick={handleOpenInviteModal}
               sx={styles.listItem}
             >
               <ListItemIcon>
@@ -379,6 +412,45 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         </Box>
       </Modal>
 
+      <Modal
+        open={inviteModalOpen}
+        onClose={handleCloseInviteModal}
+        sx={styles.modal} // 모달 위치와 정렬 스타일
+      >
+        <Box sx={styles.modalContent}>
+          {" "}
+          {/* 모달 내부 스타일 */}
+          <Typography variant="h6" sx={styles.modalTitle}>
+            사용자 초대
+          </Typography>
+          <TextField
+            label="닉네임 입력"
+            value={inviteNickname}
+            onChange={(e) => setInviteNickname(e.target.value)}
+            fullWidth
+            variant="outlined"
+            sx={styles.textField}
+            placeholder="친구를 검색하세요"
+          />
+          <Box sx={styles.modalButtonContainer}>
+            <Button
+              variant="outlined"
+              onClick={handleCloseInviteModal}
+              sx={styles.cancelButton}
+            >
+              취소
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleInviteUser}
+              sx={styles.confirmButton}
+            >
+              초대
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
+
       {/* 채팅 메시지 리스트 */}
       <Box sx={styles.messageContainer} ref={messageContainerRef}>
         {messages?.map((msg, index) => {
@@ -394,13 +466,18 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
               formatDate(messages[index + 1].createAt) ||
             msg.senderName !== messages[index + 1].senderName;
 
+          const isSystemMessage = msg.type === MessageType.INVITE;
+
           return (
             <Box
               key={msg.id}
               sx={{
                 ...styles.messageRow,
-                flexDirection:
-                  msg.senderName === user.name ? "row-reverse" : "row",
+                flexDirection: isSystemMessage
+                  ? "row" // 초대 메시지는 중앙 정렬
+                  : msg.senderName === user.name
+                    ? "row-reverse"
+                    : "row",
                 marginBottom: isLastInGroup
                   ? "5px"
                   : isFirstInGroup
@@ -408,8 +485,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                     : "0px",
               }}
             >
-              {/* Show avatar, name, and timestamp only if this is the first message in a group */}
-              {isFirstInGroup &&
+              {/* 아바타와 닉네임은 일반 메시지에서만 표시 */}
+              {!isSystemMessage &&
+              isFirstInGroup &&
               msg.senderName !== user.name &&
               (msg.type === "MESSAGE" || msg.type === "FILE") ? (
                 <Box sx={styles.senderInfo}>
@@ -425,27 +503,32 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                   </Box>
                 </Box>
               ) : (
-                <Box sx={{ width: "38px" }} /> // empty space for alignment
+                // 빈 공간 유지 (아바타가 없는 경우)
+                <Box sx={{ width: "38px" }} />
               )}
 
+              {/* 메시지 박스 */}
               <Box
                 sx={{
                   ...styles.messageBox,
-                  backgroundColor:
-                    msg.type !== "MESSAGE" && msg.type !== "FILE"
+                  backgroundColor: isSystemMessage
+                    ? "#444" // 시스템 메시지 스타일
+                    : msg.type !== "MESSAGE" && msg.type !== "FILE"
                       ? "rgba(87, 83, 89, 0.3)" // 50% 투명도
                       : msg.senderName === user.name
                         ? "#615ef1"
                         : "#3b4654",
-                  alignSelf:
-                    msg.type !== "MESSAGE" && msg.type !== "FILE"
+                  alignSelf: isSystemMessage
+                    ? "center" // 시스템 메시지는 중앙 정렬
+                    : msg.type !== "MESSAGE" && msg.type !== "FILE"
                       ? "center"
                       : msg.senderName === user.name
                         ? "flex-end"
                         : "flex-start",
                   margin:
-                    msg.type !== "MESSAGE" && msg.type !== "FILE"
-                      ? "0 auto"
+                    isSystemMessage ||
+                    (msg.type !== "MESSAGE" && msg.type !== "FILE")
+                      ? "0 auto" // 시스템 메시지 및 특정 메시지 중앙 정렬
                       : "",
                   marginBottom: isLastInGroup
                     ? "5px"
@@ -470,7 +553,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                 )}
               </Box>
 
-              {/* Show timestamp only for the first message in a group */}
+              {/* 타임스탬프는 일반 메시지에서만 표시 */}
               {isLastInGroup &&
                 (msg.type === "MESSAGE" || msg.type === "FILE") && (
                   <Typography sx={styles.timestamp}>
@@ -545,6 +628,68 @@ const styles = {
     boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
     borderRadius: "8px",
     overflow: "hidden",
+  },
+  modal: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#333333",
+    padding: "1.5rem",
+    borderRadius: "12px",
+    width: "18rem",
+    maxWidth: "90%",
+    display: "flex",
+    flexDirection: "column",
+    gap: "1.5rem",
+    border: "1px solid #555",
+  },
+  modalTitle: {
+    fontSize: "1.25rem",
+    fontWeight: "bold",
+    color: "#fff",
+    textAlign: "center",
+  },
+  textField: {
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: "#444",
+      color: "#fff",
+      borderRadius: "8px",
+      "& fieldset": {
+        borderColor: "#666",
+      },
+      "&:hover fieldset": {
+        borderColor: "#888",
+      },
+      "&.Mui-focused fieldset": {
+        borderColor: "#fff",
+      },
+    },
+    "& .MuiInputLabel-root": {
+      color: "#aaa",
+    },
+  },
+  modalButtonContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "1rem",
+  },
+  cancelButton: {
+    backgroundColor: "#555",
+    color: "#fff",
+    borderColor: "#666",
+    "&:hover": {
+      backgroundColor: "#666",
+      borderColor: "#777",
+    },
+  },
+  confirmButton: {
+    backgroundColor: "#615ef1",
+    color: "#fff",
+    "&:hover": {
+      backgroundColor: "#5050d0",
+    },
   },
   listItem: {
     display: "flex",
