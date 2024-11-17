@@ -100,15 +100,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const location = useLocation();
   const userInfo = location.state?.userInfo || [];
 
-  // 모든 참여자의 닉네임을 나열하여 roomName 생성
-  const roomName = userInfo.map((u: UserInfo) => u.nickname).join(", ");
-
   // 화면에 표시될 때는 로그인한 유저의 닉네임을 제외하고 나머지 유저의 닉네임을 나열하여 roomTitle 생성
-  const roomTitle =
-    userInfo
-      .filter((u: UserInfo) => u.nickname !== nickname)
-      .map((u: UserInfo) => u.nickname)
-      .join(", ") || "채팅방";
+  // const roomTitle =
+  //   userInfo
+  //     .filter((u: UserInfo) => u.nickname !== nickname)
+  //     .map((u: UserInfo) => u.nickname)
+  //     .join(", ") || "채팅방";
+
+  const roomTitle = location.state?.roomName || [];
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -385,12 +384,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         {messages?.map((msg, index) => {
           const isFirstInGroup =
             index === 0 || // 첫 번째 메시지일 때 true
-            formatDate(msg.createAt) !== formatDate(messages[index - 1].createAt) ||
+            formatDate(msg.createAt) !==
+              formatDate(messages[index - 1].createAt) ||
             msg.senderName !== messages[index - 1].senderName;
 
           const isLastInGroup =
             index === messages.length - 1 ||
-            formatDate(msg.createAt) !== formatDate(messages[index + 1].createAt) ||
+            formatDate(msg.createAt) !==
+              formatDate(messages[index + 1].createAt) ||
             msg.senderName !== messages[index + 1].senderName;
 
           return (
@@ -400,12 +401,17 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                 ...styles.messageRow,
                 flexDirection:
                   msg.senderName === user.name ? "row-reverse" : "row",
-                marginBottom: isLastInGroup ? "5px" : isFirstInGroup ? "-10px" : "0px",
+                marginBottom: isLastInGroup
+                  ? "5px"
+                  : isFirstInGroup
+                    ? "-10px"
+                    : "0px",
               }}
             >
               {/* Show avatar, name, and timestamp only if this is the first message in a group */}
-              {isFirstInGroup && msg.senderName !== user.name &&
-                (msg.type === "MESSAGE" || msg.type === "FILE") ? (
+              {isFirstInGroup &&
+              msg.senderName !== user.name &&
+              (msg.type === "MESSAGE" || msg.type === "FILE") ? (
                 <Box sx={styles.senderInfo}>
                   <Avatar
                     sx={styles.messageAvatar}
@@ -438,8 +444,14 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
                         ? "flex-end"
                         : "flex-start",
                   margin:
-                    msg.type !== "MESSAGE" && msg.type !== "FILE" ? "0 auto" : "",
-                  marginBottom: isLastInGroup ? "5px" : isFirstInGroup ? "10px" : "0px",
+                    msg.type !== "MESSAGE" && msg.type !== "FILE"
+                      ? "0 auto"
+                      : "",
+                  marginBottom: isLastInGroup
+                    ? "5px"
+                    : isFirstInGroup
+                      ? "10px"
+                      : "0px",
                 }}
               >
                 {msg.type === "FILE" ? (
@@ -459,11 +471,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
               </Box>
 
               {/* Show timestamp only for the first message in a group */}
-              {isLastInGroup && (msg.type === "MESSAGE" || msg.type === "FILE") && (
-                <Typography sx={styles.timestamp}>
-                  {formatDate(msg.createAt)}
-                </Typography>
-              )}
+              {isLastInGroup &&
+                (msg.type === "MESSAGE" || msg.type === "FILE") && (
+                  <Typography sx={styles.timestamp}>
+                    {formatDate(msg.createAt)}
+                  </Typography>
+                )}
             </Box>
           );
         })}
