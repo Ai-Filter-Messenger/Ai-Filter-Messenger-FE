@@ -26,7 +26,7 @@ interface User {
 }
 
 interface ContactsProps {
-  onSelectUser: (user: User) => void;
+  onSelectUser: (nickname: string) => void; // 닉네임 전달
 }
 
 const API_BASE_URL =
@@ -202,11 +202,11 @@ const Contacts: React.FC<ContactsProps> = ({ onSelectUser }) => {
       /> */}
 
       {/* 연락처 리스트 */}
-      {filteredContacts.map((contact) => (
+      {followingList.map((contact) => (
         <Box
           key={contact.id}
           sx={styles.contactItem}
-          onClick={() => onSelectUser(contact)}
+          onClick={() => onSelectUser(contact.nickname)} // 유저 닉네임 전달
         >
           <Avatar
             src={contact.profileImageUrl}

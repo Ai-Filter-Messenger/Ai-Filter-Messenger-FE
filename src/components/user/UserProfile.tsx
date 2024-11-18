@@ -8,10 +8,10 @@ const API_BASE_URL =
   import.meta.env.VITE_BASE_URL || "http://localhost:8080/api";
 
 interface UserProfileProps {
-  userId?: number; // 필요 시 userId를 props로 전달 가능
+  nickname?: string; // 닉네임 전달
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ nickname }) => {
   const [user, setUser] = useState({
     name: "",
     nickname: "",
@@ -27,7 +27,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
     const fetchUserInfo = async () => {
       try {
         const response = await axios.get(
-          `${API_BASE_URL}/user/info`, // userId가 필요한 경우 `/user/info/${userId}`로 수정
+          `${API_BASE_URL}/user/info${
+            nickname ? `?nickname=${encodeURIComponent(nickname)}` : ""
+          }`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -38,7 +40,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
           name: response.data.name || "이름 없음",
           nickname: response.data.nickname || "닉네임 없음",
           email: response.data.email || "이메일 없음",
-          phone: response.data.phone || "-",
+          phone: response.data.phoneNumber || "-",
           profileImageUrl: response.data.profileImageUrl || "",
         });
       } catch (error) {
@@ -47,7 +49,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
     };
 
     fetchUserInfo();
-  }, [token, userId]);
+  }, [token, nickname]);
 
   return (
     <Box sx={styles.container}>
