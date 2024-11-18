@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { AppDispatch, RootState } from "@/redux/store";
 import { setCurrentChat } from "@/redux/slices/chat";
-import { FaPlus, FaThumbtack } from "react-icons/fa6";
+import { FaPlus, FaThumbtack, FaUpload } from "react-icons/fa6";
 import axios from "@/utils/axios";
 import SearchBar from "@/components/SearchBar";
 import { stompClient } from "@/websocket/socketConnection";
@@ -51,6 +51,7 @@ const ChatLists: React.FC = () => {
   );
   const [customRoomName, setCustomRoomName] = useState<string>("");
   const [useCustomRoomName, setUseCustomRoomName] = useState<boolean>(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null); // 추가: 파일 상태
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -58,6 +59,13 @@ const ChatLists: React.FC = () => {
   const loginId = useSelector((state: RootState) => state.auth.user.loginId);
   const token = useSelector((state: RootState) => state.auth.token);
   const nickname = localStorage.getItem("nickname");
+
+  // 파일 업로드 핸들러
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedFile(event.target.files[0]);
+    }
+  };
 
   // 채팅방 목록을 서버에서 가져오는 함수
   useEffect(() => {
@@ -364,49 +372,43 @@ const ChatLists: React.FC = () => {
 
   const handleCreateRoom = async () => {
     try {
-      const roomName = useCustomRoomName
-        ? customRoomName // 사용자 정의 이름이 있으면 사용
-        : [nickname, ...selectedFriends].join(", "); // 없으면 참여자 목록 나열
-      const roomTitle = selectedFriends.join(", ") || "채팅방"; // roomName에서 로그인한 유저 제외 ***
-      const chatRoomImage = chatRoomType === "OPEN" ? "open" : "";
+      const formData = new FormData();
 
-      const response = await axios.post(
-        "/chat/create",
-        {
-          loginId,
-          roomName: roomName,
-          nicknames: selectedFriends,
-          type: chatRoomType,
-          customRoomName: useCustomRoomName, // 사용자 정의 이름 여부 전송
-          chatRoomImage: chatRoomImage,
+      const roomName = useCustomRoomName
+        ? customRoomName
+        : [loginId, ...selectedFriends].join(", ");
+
+      const register = {
+        roomName,
+        nicknames: selectedFriends,
+        type: chatRoomType,
+      };
+
+      formData.append("register", JSON.stringify(register)); // JSON 데이터 추가
+      if (selectedFile) {
+        formData.append("file", selectedFile); // 파일 추가
+      }
+
+      const response = await axios.post("/chat/create", formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      });
 
       if (response.status === 200) {
         alert("채팅방이 성공적으로 생성되었습니다!");
         setIsModalOpen(false);
-        setCustomRoomName(""); // 채팅방 이름 입력 초기화
-        setSelectedFriends([]); // 친구 목록 초기화
-        setUseCustomRoomName(false); // 사용자 정의 이름 사용 여부 초기화
-
-        // 채팅방 목록 새로고침
-        const updatedRooms = await axios.get("/chat/find/list", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          params: { loginId },
-        });
+        setCustomRoomName("");
+        setSelectedFriends([]);
+        setSelectedFile(null);
+        setUseCustomRoomName(false);
       } else {
         console.error("채팅방 생성 실패, 상태 코드:", response.status);
       }
     } catch (error) {
       console.error("채팅방 생성 실패:", error);
+      alert("채팅방 생성에 실패했습니다.");
     }
   };
 
@@ -547,6 +549,27 @@ const ChatLists: React.FC = () => {
               </Badge>
             ))}
           </Box>
+
+          <Button
+            variant="outlined"
+            component="label"
+            startIcon={<FaUpload />}
+            sx={{ marginBottom: "1rem" }}
+          >
+            채팅방 커버 업로드
+            <input
+              type="file"
+              hidden
+              onChange={handleFileUpload}
+              accept="image/*"
+            />
+          </Button>
+
+          {selectedFile && (
+            <Typography variant="body2" sx={{ marginBottom: "1rem" }}>
+              업로드된 파일: {selectedFile.name}
+            </Typography>
+          )}
 
           <Button variant="contained" onClick={handleCreateRoom}>
             채팅방 생성하기
