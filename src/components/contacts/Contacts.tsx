@@ -5,12 +5,8 @@ import {
   TextField,
   IconButton,
   Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Modal,
   Button,
+  Modal,
 } from "@mui/material";
 import { FaUserPlus, FaEnvelope } from "react-icons/fa";
 import axios from "axios";
@@ -43,6 +39,7 @@ const Contacts: React.FC<ContactsProps> = ({ onSelectUser }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setModalOpen] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]); // 타입 명시
+  const [followNickname, setFollowNickname] = useState("");
   const token = useSelector((state: RootState) => state.auth.token);
   const navigate = useNavigate();
 
@@ -154,31 +151,30 @@ const Contacts: React.FC<ContactsProps> = ({ onSelectUser }) => {
   //   }
   // };
 
-  // 팔로우/언팔로우 핸들러
-  const handleFollowToggle = async (nickname: string, isFollowing: boolean) => {
+  // 팔로우 핸들러
+  const handleFollow = async () => {
+    if (!followNickname.trim()) {
+      alert("닉네임을 입력해주세요.");
+      return;
+    }
+
     try {
-      const url = isFollowing ? "/user/unfollow" : "/user/follow";
       await axios.put(
-        `${API_BASE_URL}${url}`,
-        { nickname },
+        `${API_BASE_URL}/user/follow?nickname=${encodeURIComponent(followNickname)}`, // 쿼리스트링으로 전달
+        { nickname: followNickname },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert(isFollowing ? "언팔로우 성공!" : "팔로우 성공!");
-      setFollowingList((prev) =>
-        isFollowing
-          ? prev.filter((user) => user.nickname !== nickname)
-          : [...prev, allUsers.find((user) => user.nickname === nickname)!]
-      );
+      alert("친구 추가가 완료되었습니다!");
+      setFollowNickname(""); // 입력 필드 초기화
+      setModalOpen(false); // 모달 닫기
     } catch (error) {
-      console.error("팔로우/언팔로우 실패:", error);
+      console.error("친구 추가 실패:", error);
+      alert("친구 추가에 실패했습니다.");
     }
   };
 
   // 모달 열기/닫기
-  const toggleModal = () => {
-    setModalOpen((prev) => !prev);
-    if (!isModalOpen) fetchAllUsers(); // 모달 열 때 유저 리스트 가져오기
-  };
+  const toggleModal = () => setModalOpen((prev) => !prev);
 
   return (
     <Box>
@@ -187,7 +183,7 @@ const Contacts: React.FC<ContactsProps> = ({ onSelectUser }) => {
         <Typography variant="h1" sx={styles.title}>
           Contacts
         </Typography>
-        <IconButton>
+        <IconButton onClick={toggleModal}>
           <FaUserPlus />
         </IconButton>
       </Box>
@@ -210,7 +206,7 @@ const Contacts: React.FC<ContactsProps> = ({ onSelectUser }) => {
         <Box
           key={contact.id}
           sx={styles.contactItem}
-          onClick={() => onSelectUser(contact)} // User selection
+          onClick={() => onSelectUser(contact)}
         >
           <Avatar
             src={contact.profileImageUrl}
@@ -221,11 +217,35 @@ const Contacts: React.FC<ContactsProps> = ({ onSelectUser }) => {
             <Typography sx={styles.contactName}>{contact.nickname}</Typography>
             <Typography sx={styles.contactEmail}>{contact.email}</Typography>
           </Box>
-          <IconButton onClick={() => handleMessageClick(contact)}>
+          <IconButton>
             <FaEnvelope style={{ fontSize: "1.2rem" }} />
           </IconButton>
         </Box>
       ))}
+
+      {/* 모달 */}
+      <Modal open={isModalOpen} onClose={toggleModal}>
+        <Box sx={styles.modal}>
+          <Typography variant="h6" sx={styles.modalTitle}>
+            친구 추가하기
+          </Typography>
+          <TextField
+            placeholder="닉네임을 입력하세요"
+            value={followNickname}
+            onChange={(e) => setFollowNickname(e.target.value)}
+            fullWidth
+            sx={styles.textField}
+          />
+          <Box sx={styles.modalActions}>
+            <Button onClick={toggleModal} variant="outlined" color="primary">
+              취소
+            </Button>
+            <Button onClick={handleFollow} variant="contained" color="primary">
+              추가
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
     </Box>
   );
 };
@@ -245,7 +265,7 @@ const styles = {
   title: {
     marginTop: "1rem",
     marginBottom: "1rem",
-    padding: "1rem", // 패딩 추가
+    padding: "1rem",
     fontWeight: "bold",
     color: "#fff",
   },
@@ -285,6 +305,32 @@ const styles = {
   contactEmail: {
     color: "#aaa",
     fontSize: "0.875rem",
+  },
+  modal: {
+    position: "absolute" as const,
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    backgroundColor: "#1f1f1f",
+    padding: "2rem",
+    borderRadius: "8px",
+    width: "300px",
+  },
+  modalTitle: {
+    marginBottom: "1rem",
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  textField: {
+    marginBottom: "1rem",
+    "& .MuiOutlinedInput-root": {
+      backgroundColor: "#333",
+      color: "#fff",
+    },
+  },
+  modalActions: {
+    display: "flex",
+    justifyContent: "space-between",
   },
 };
 
