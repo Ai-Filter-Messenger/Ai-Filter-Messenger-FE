@@ -15,9 +15,13 @@ interface ChatRoom {
 
 interface SearchMainProps {
   chatRooms?: ChatRoom[];
+  onJoinChatRoom: (chatRoomId: number) => void; // 채팅방 참여 핸들러 추가
 }
 
-const SearchMain: React.FC<SearchMainProps> = ({ chatRooms = [] }) => {
+const SearchMain: React.FC<SearchMainProps> = ({
+  chatRooms = [],
+  onJoinChatRoom,
+}) => {
   return (
     <Box>
       {[...chatRooms]
@@ -25,6 +29,13 @@ const SearchMain: React.FC<SearchMainProps> = ({ chatRooms = [] }) => {
         .map((room) => (
           <Box
             key={room.chatRoomId}
+            onClick={() => {
+              if (room.chatRoomId) {
+                onJoinChatRoom(room.chatRoomId); // 유효한 chatRoomId만 전달
+              } else {
+                console.error("Invalid chatRoomId:", room);
+              }
+            }}
             sx={{
               display: "flex",
               justifyContent: "space-between",
@@ -47,19 +58,40 @@ const SearchMain: React.FC<SearchMainProps> = ({ chatRooms = [] }) => {
                 style={{ width: "40px", height: "40px", borderRadius: "50%" }}
               />
               <Box sx={{ marginLeft: "1rem" }}>
-                <Typography variant="body1" sx={{ fontWeight: 600, color: "#fff" }}>
+                <Typography
+                  variant="body1"
+                  sx={{ fontWeight: 600, color: "#fff" }}
+                >
                   {room.roomName} ({room.userCount})
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: "#B8B8B8" }}>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 600, color: "#B8B8B8" }}
+                >
                   {room.recentMessage}
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
               {room.fix && (
-                <FaThumbtack style={{ fontSize: '12px', marginBottom: '15px', color: "#fff" }} />
+                <FaThumbtack
+                  style={{
+                    fontSize: "12px",
+                    marginBottom: "15px",
+                    color: "#fff",
+                  }}
+                />
               )}
-              <Typography variant="caption" sx={{ color: "#B8B8B8", fontSize: "0.8rem", fontWeight: 600 }}>
+              <Typography
+                variant="caption"
+                sx={{ color: "#B8B8B8", fontSize: "0.8rem", fontWeight: 600 }}
+              >
                 {new Date(room.createAt).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -69,7 +101,12 @@ const SearchMain: React.FC<SearchMainProps> = ({ chatRooms = [] }) => {
                 <Badge
                   badgeContent={room.notificationCount}
                   color="primary"
-                  sx={{ marginRight: "0.5rem", fontSize: "0.75rem", fontWeight: "800", marginBottom: "0.5rem" }}
+                  sx={{
+                    marginRight: "0.5rem",
+                    fontSize: "0.75rem",
+                    fontWeight: "800",
+                    marginBottom: "0.5rem",
+                  }}
                 />
               )}
             </Box>
