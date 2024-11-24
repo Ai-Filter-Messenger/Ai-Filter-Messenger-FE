@@ -23,6 +23,7 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>(); // AppDispatch 타입 적용
+  const baseUrl = import.meta.env.VITE_BASE_URL;
 
   const authState = useSelector((state: RootState) => state.auth); // auth 상태 가져오기
 
@@ -39,6 +40,10 @@ const LoginPage: React.FC = () => {
       }
     }
   };
+
+  const handleSocialLogin = (name: string) => {
+    window.location.href = baseUrl + "/user/login/" + name;
+  }
 
   return (
     <Box width="100%">
@@ -134,6 +139,9 @@ const LoginPage: React.FC = () => {
               borderColor: "white", // 호버 시에 흰색으로
             },
           }}
+          onClick={() => {
+            handleSocialLogin("naver");
+          }}
         >
           Naver
         </Button>
@@ -156,6 +164,9 @@ const LoginPage: React.FC = () => {
               borderColor: "white", // 호버 시에 흰색으로
             },
           }}
+          onClick={() => {
+            handleSocialLogin("google");
+          }}
         >
           Google
         </Button>
@@ -177,6 +188,9 @@ const LoginPage: React.FC = () => {
               color: "white",
               borderColor: "white", // 호버 시에 흰색으로
             },
+          }}
+          onClick={() => {
+            handleSocialLogin("kakao");
           }}
         >
           Kakao

@@ -37,6 +37,7 @@ const RegisterPage = lazy(() => import("../pages/auth/RegisterPage"));
 const FindIdPage = lazy(() => import("../pages/auth/FindIdPage"));
 const FindPasswordPage = lazy(() => import("../pages/auth/FindPasswordPage"));
 const ResetPasswordPage = lazy(() => import("../pages/auth/ResetPasswordPage"));
+const OAuthRedirectPage = lazy(() => import("../pages/auth/OAuthRedirectPage"));
 
 // Suspense로 각 페이지를 감싸는 함수
 const withSuspense = (Component: React.ComponentType) => (
@@ -107,6 +108,10 @@ export default function Router() {
         { path: "find-password", element: withSuspense(FindPasswordPage) }, // 비밀번호 찾기
         { path: "reset-password", element: withSuspense(ResetPasswordPage) }, // 비밀번호 재설정
       ],
+    },
+    {
+      path: "/oauth2/redirect",
+      element: withSuspense(OAuthRedirectPage),
     },
     // 로그인 페이지로 리디렉션
     { path: "*", element: <Navigate to="/auth/login" replace /> },
