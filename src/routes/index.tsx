@@ -38,6 +38,7 @@ const FindIdPage = lazy(() => import("../pages/auth/FindIdPage"));
 const FindPasswordPage = lazy(() => import("../pages/auth/FindPasswordPage"));
 const ResetPasswordPage = lazy(() => import("../pages/auth/ResetPasswordPage"));
 const OAuthRedirectPage = lazy(() => import("../pages/auth/OAuthRedirectPage"));
+const AdminPage = lazy(() => import("../pages/AdminPage"));
 
 // Suspense로 각 페이지를 감싸는 함수
 const withSuspense = (Component: React.ComponentType) => (
@@ -50,6 +51,14 @@ const withSuspense = (Component: React.ComponentType) => (
 
 export default function Router() {
   return useRoutes([
+    {
+      path: "/admin",
+      element: (
+        <DashboardLayout
+          leftComponent={withSuspense(AdminPage)} // AdminPage 렌더링
+        />
+      ),
+    },
     {
       // 유저의 기본 채팅 페이지
       path: "/chat/:loginId",

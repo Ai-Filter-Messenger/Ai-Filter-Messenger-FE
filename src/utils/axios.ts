@@ -15,7 +15,13 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     // 요청 전에 실행
-    const token = localStorage.getItem("token");
+    // const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken"); // JWT 토큰 확인
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`; // Authorization 헤더에 토큰 추가
+    } else {
+      console.warn("JWT 토큰이 없습니다.");
+    }
 
     // 회원가입, 로그인, 아이디 중복 확인 API 경로에서는 Authorization 헤더를 추가하지 않도록 설정(임시)
     const nonAuthRoutes = [

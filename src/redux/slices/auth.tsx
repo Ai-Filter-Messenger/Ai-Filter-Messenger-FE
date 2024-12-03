@@ -158,21 +158,24 @@ export function LoginUser(
       localStorage.setItem("nickname", nickname);
 
       // 유저 정보 가져오기
-      const userResponse = await axios.get(`${API_BASE_URL}/user/info`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const userResponse = await axios.get(
+        `${API_BASE_URL}/user/info?nickname=${nickname}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
 
-      // dispatch(loginSuccess({ token: accessToken, user: formValues }));
+      const userRole = userResponse.data.userRole; // 유저 역할 확인
       dispatch(loginSuccess({ token: accessToken, user: userResponse.data }));
 
-      // console.log("User object in Redux:", formValues);
-      console.log("User object in Redux:", userResponse.data);
+      // ADMIN 유저면 AdminPage로 리디렉션
+      if (userRole === "ADMIN") {
+        navigate(`/admin`);
+      } else {
+        navigate(`/chat/${userResponse.data.loginId}`);
+      }
 
       toast.success("로그인 성공!");
-      console.log(response.data.accessToken);
-
-      // navigate(`/chat/${formValues.loginId}`);
-      navigate(`/chat/${userResponse.data.loginId}`);
     } catch (error: any) {
       dispatch(setError(error?.response?.data?.message || "로그인 실패."));
       toast.error(error?.response?.data?.message || "로그인 실패.");
