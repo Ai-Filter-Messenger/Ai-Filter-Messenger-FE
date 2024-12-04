@@ -45,6 +45,11 @@ const AdminPage: React.FC = () => {
     fetchFiles();
   }, []);
 
+  const convertToKB = (sizeInMB: number): string => {
+    const sizeInKB = sizeInMB / 1024; // MB -> KB로 변환
+    return `${sizeInKB.toFixed(2)} KB`;
+  };
+
   return (
     <Box display="flex" width="100%">
       <Box flex={4} p={10}>
@@ -94,7 +99,7 @@ const AdminPage: React.FC = () => {
                       : "업로드 시간 없음"}
                   </TableCell>
                   <TableCell sx={{ fontSize: "0.9rem" }}>
-                    {file.fileSize ? `${file.fileSize} KB` : "크기 없음"}
+                    {file.fileSize ? convertToKB(file.fileSize) : "크기 없음"}
                   </TableCell>
                   <TableCell sx={{ fontSize: "1rem" }}>
                     {file.nickname || "업로더 없음"}
