@@ -320,33 +320,35 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
       try {
         const response = await axios.post("/file/upload", formData, {
+          params: { roomId: chatRoomId }, // chatRoomId 전달
           headers: {
             "Content-Type": "multipart/form-data",
             Authorization: `Bearer ${token}`, // 인증 토큰 추가
           },
         });
-        if (response.status === 200) {
-          console.log("파일 업로드 성공");
+
+        const { success, fileUrl } = response.data;
+
+        if (success) {
           alert("파일 업로드 성공");
 
           // 업로드한 파일을 메시지로 표시
-          const result = response.data;
           const message: Message = {
             id: uuidv4(),
-            message: result,
+            message: fileUrl, // 업로드된 파일의 URL
             senderName: user.name,
             roomId: chatRoomId as string,
             createAt: new Date().toISOString(),
             type: MessageType.FILE,
           };
+
           dispatch(addMessageSuccess(message));
         } else {
-          console.error("파일 업로드 실패");
-          alert("파일 업로드 실패");
+          alert("파일 업로드에 실패했습니다.");
         }
       } catch (error) {
         console.error("파일 업로드 오류:", error);
-        alert("파일 업로드 오류");
+        alert("파일 업로드 중 오류가 발생했습니다.");
       }
     }
   };

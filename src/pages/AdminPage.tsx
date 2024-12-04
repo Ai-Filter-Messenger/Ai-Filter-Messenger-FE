@@ -20,7 +20,7 @@ const AdminPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = localStorage.getItem("token");
         const response = await axios.get("/file/all", {
           headers: {
             Authorization: `Bearer ${token}`,

@@ -15,8 +15,8 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     // 요청 전에 실행
-    // const token = localStorage.getItem("token");
-    const token = localStorage.getItem("accessToken"); // JWT 토큰 확인
+    const token = localStorage.getItem("token");
+    // const token = localStorage.getItem("accessToken"); // JWT 토큰 확인
     if (token) {
       config.headers.Authorization = `Bearer ${token}`; // Authorization 헤더에 토큰 추가
     } else {
@@ -45,46 +45,58 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// // 요청 인터셉터
-// axiosInstance.interceptors.request.use(
-//   (config) => {
-//     const token = localStorage.getItem("token"); // 토큰이 있으면 헤더에 추가
-//     if (token) {
-//       console.log("토큰이 설정되었습니다:", token); // 토큰을 콘솔에 출력
-//       config.headers.Authorization = `Bearer ${token}`; // Authorization 헤더에 토큰 추가
-//     } else {
-//       console.log("토큰이 존재하지 않습니다.");
-//     }
-//     return config;
-//   },
-//   (error) => {
-//     // 요청 오류 처리
-//     return Promise.reject(error);
-//   }
-// );
-
 // 응답 인터셉터
 axiosInstance.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
+  async (error) => {
     if (error.response) {
-      // 서버로부터의 응답이 있는 경우
-      console.error("HTTP Status:", error.response.status); // 상태 코드 출력
-      console.error("응답 데이터:", error.response.data); // 서버로부터의 응답 데이터
-      console.error("응답 헤더:", error.response.headers); // 응답 헤더 출력
-      console.error("요청 URL:", error.config.url); // 요청한 URL 출력
-      console.error("요청 데이터:", error.config.data); // 요청 시 보낸 데이터 출력
+      console.error("HTTP Status:", error.response.status);
+      if (error.response.status === 401) {
+        // 401 Unauthorized 에러 처리
+        console.warn("AccessToken이 만료되었습니다. 갱신 시도 중...");
+        const originalRequest = error.config;
 
+        // 이미 한 번 갱신을 시도한 요청인지 확인
+        if (!originalRequest._retry) {
+          originalRequest._retry = true;
+
+          const refreshToken = localStorage.getItem("refreshToken");
+          if (refreshToken) {
+            try {
+              // RefreshToken으로 AccessToken 갱신 요청
+              const response = await axios.post(
+                `${BASE_URL}/auth/refresh`, // RefreshToken 갱신 엔드포인트
+                { refreshToken }
+              );
+
+              const { accessToken } = response.data;
+              localStorage.setItem("accessToken", accessToken);
+
+              // 갱신된 AccessToken으로 원래 요청 재시도
+              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+              return axiosInstance(originalRequest);
+            } catch (refreshError) {
+              console.error("RefreshToken 갱신 실패:", refreshError);
+              localStorage.removeItem("accessToken");
+              localStorage.removeItem("refreshToken");
+              window.location.href = "/auth/login"; // 로그인 페이지로 리디렉션
+            }
+          } else {
+            console.error("RefreshToken이 존재하지 않습니다. 로그아웃 처리.");
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            window.location.href = "/auth/login"; // 로그인 페이지로 리디렉션
+          }
+        }
+      }
       if (error.response.status === 403) {
         console.error("403 Forbidden 에러가 발생했습니다.");
       }
     } else if (error.request) {
-      // 요청은 전송되었지만 응답이 없는 경우
       console.error("서버로부터 응답이 없습니다.", error.request);
     } else {
-      // 요청 설정 중에 발생한 오류
       console.error("요청 중 오류가 발생했습니다:", error.message);
     }
     return Promise.reject(error);
