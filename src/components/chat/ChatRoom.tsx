@@ -33,6 +33,7 @@ import {
   setCurrentConversation,
   setCurrentChat,
 } from "@/redux/slices/chat";
+import Shared from "../files/Shared";
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -101,13 +102,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
   const location = useLocation();
   const userInfo = location.state?.userInfo || [];
 
-  // 화면에 표시될 때는 로그인한 유저의 닉네임을 제외하고 나머지 유저의 닉네임을 나열하여 roomTitle 생성
-  // const roomTitle =
-  //   userInfo
-  //     .filter((u: UserInfo) => u.nickname !== nickname)
-  //     .map((u: UserInfo) => u.nickname)
-  //     .join(", ") || "채팅방";
-
   const roomTitle = location.state?.roomName || [];
 
   const messageContainerRef = useRef<HTMLDivElement>(null);
@@ -120,6 +114,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
   const handleOpenInviteModal = () => setInviteModalOpen(true);
   const handleCloseInviteModal = () => setInviteModalOpen(false);
+
+  const [refreshSharedFiles, setRefreshSharedFiles] = useState(0); // Shared 갱신 트리거
+
+  const onFileUploadSuccess = () => {
+    setRefreshSharedFiles((prev) => prev + 1); // Shared 컴포넌트 갱신
+  };
 
   const handlePinChatRoom = async () => {
     console.log("채팅방 고정");
@@ -312,7 +312,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
     if (files && files.length > 0) {
       const formData = new FormData();
       formData.append("roomId", chatRoomId || "");
-      formData.append("loginId", user.name);
 
       for (const file of files) {
         formData.append("files", file);
@@ -320,29 +319,20 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
 
       try {
         const response = await axios.post("/file/upload", formData, {
-          params: { roomId: chatRoomId }, // chatRoomId 전달
+          params: { roomId: chatRoomId },
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`, // 인증 토큰 추가
+            Authorization: `Bearer ${token}`,
           },
         });
 
-        const { success, fileUrl } = response.data;
+        console.log("File upload response:", response.data);
+
+        const { success } = response.data;
 
         if (success) {
           alert("파일 업로드 성공");
-
-          // 업로드한 파일을 메시지로 표시
-          const message: Message = {
-            id: uuidv4(),
-            message: fileUrl, // 업로드된 파일의 URL
-            senderName: user.name,
-            roomId: chatRoomId as string,
-            createAt: new Date().toISOString(),
-            type: MessageType.FILE,
-          };
-
-          dispatch(addMessageSuccess(message));
+          onFileUploadSuccess(); // 파일 업로드 후 Shared 갱신
         } else {
           alert("파일 업로드에 실패했습니다.");
         }

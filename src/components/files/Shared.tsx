@@ -12,6 +12,7 @@ import axios from "@/utils/axios";
 
 interface SharedProps {
   chatRoomId: string;
+  refreshTrigger?: number; // 새로고침 트리거
 }
 
 interface SharedFile {
@@ -34,7 +35,7 @@ const formatDate = (dateString: string) => {
   return `${year}.${month}.${day}. ${ampm} ${formattedHours}:${minutes}`;
 };
 
-const Shared: React.FC<SharedProps> = ({ chatRoomId }) => {
+const Shared: React.FC<SharedProps> = ({ chatRoomId, refreshTrigger }) => {
   const [photosAndVideos, setPhotosAndVideos] = useState<SharedFile[]>([]);
   const [files, setFiles] = useState<SharedFile[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -43,31 +44,32 @@ const Shared: React.FC<SharedProps> = ({ chatRoomId }) => {
     null
   );
 
+  const fetchSharedFiles = async () => {
+    try {
+      const response = await axios.get("/file/chatroom/find", {
+        params: { chatRoomId },
+      });
+      const sharedFiles: SharedFile[] = response.data;
+
+      setPhotosAndVideos(
+        sharedFiles.filter((file) =>
+          /\.(jpg|jpeg|png|gif|mp4|mov|avi)$/i.test(file.fileUrl)
+        )
+      );
+      setFiles(
+        sharedFiles.filter(
+          (file) => !/.(jpg|jpeg|png|gif|mp4|mov|avi)$/i.test(file.fileUrl)
+        )
+      );
+    } catch (error) {
+      console.error("Failed to fetch shared files:", error);
+    }
+  };
+
+  // chatRoomId 또는 refreshTrigger 변경 시 파일 목록 갱신
   useEffect(() => {
-    const fetchSharedFiles = async () => {
-      try {
-        const response = await axios.get("/file/chatroom/find", {
-          params: { chatRoomId },
-        });
-        const sharedFiles: SharedFile[] = response.data;
-
-        setPhotosAndVideos(
-          sharedFiles.filter((file) =>
-            /\.(jpg|jpeg|png|gif|mp4|mov|avi)$/i.test(file.fileUrl)
-          )
-        );
-        setFiles(
-          sharedFiles.filter(
-            (file) => !/.(jpg|jpeg|png|gif|mp4|mov|avi)$/i.test(file.fileUrl)
-          )
-        );
-      } catch (error) {
-        console.error("Failed to fetch shared files:", error);
-      }
-    };
-
     if (chatRoomId) fetchSharedFiles();
-  }, [chatRoomId]);
+  }, [chatRoomId, refreshTrigger]);
 
   const handlePreview = (file: SharedFile) => {
     const fileExtension = file.fileUrl.split(".").pop()?.toLowerCase();
