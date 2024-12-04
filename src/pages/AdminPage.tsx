@@ -7,8 +7,9 @@ import {
   TableCell,
   TableRow,
   TableHead,
+  CircularProgress,
 } from "@mui/material";
-import axios from "@/utils/axios";
+import axiosInstance from "@/utils/axios";
 
 const AdminPage: React.FC = () => {
   const [fileList, setFileList] = useState<any[]>([]);
@@ -20,21 +21,22 @@ const AdminPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get("/file/all", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        // AxiosInstance를 통해 파일 목록 요청
+        const response = await axiosInstance.get("/file/all");
+
         if (Array.isArray(response.data)) {
           setFileList(response.data);
         } else {
           setError("API 응답 데이터가 올바르지 않습니다.");
           setFileList([]);
         }
-      } catch (err) {
-        setError("파일 목록을 가져오지 못했습니다.");
-        console.error(err);
+      } catch (err: any) {
+        // 에러 메시지 설정
+        setError(
+          err.response?.data?.message ||
+            "파일 목록을 가져오지 못했습니다. 다시 시도해주세요."
+        );
+        console.error("파일 목록 요청 실패:", err);
       } finally {
         setLoading(false);
       }
@@ -51,7 +53,9 @@ const AdminPage: React.FC = () => {
         </Typography>
         {error && <Typography color="error">{error}</Typography>}
         {loading ? (
-          <Typography>Loading...</Typography>
+          <Box display="flex" justifyContent="center" alignItems="center">
+            <CircularProgress />
+          </Box>
         ) : (
           <Table>
             <TableHead>
