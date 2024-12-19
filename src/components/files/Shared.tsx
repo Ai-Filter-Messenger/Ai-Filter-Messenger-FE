@@ -51,13 +51,16 @@ const Shared: React.FC<SharedProps> = ({ chatRoomId, refreshTrigger }) => {
       });
       const sharedFiles: SharedFile[] = response.data;
 
+      // 불법 파일은 표시하지 않도록 필터링
+      const validFiles = sharedFiles.filter((file) => !file.reported);
+
       setPhotosAndVideos(
-        sharedFiles.filter((file) =>
+        validFiles.filter((file) =>
           /\.(jpg|jpeg|png|gif|mp4|mov|avi)$/i.test(file.fileUrl)
         )
       );
       setFiles(
-        sharedFiles.filter(
+        validFiles.filter(
           (file) => !/.(jpg|jpeg|png|gif|mp4|mov|avi)$/i.test(file.fileUrl)
         )
       );
