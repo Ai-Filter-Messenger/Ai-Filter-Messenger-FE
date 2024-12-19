@@ -331,7 +331,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ chatRoomId }) => {
         const { success } = response.data;
 
         if (success) {
-          alert("파일 업로드 성공");
+          alert("파일 업로드에 성공했습니다");
           onFileUploadSuccess(); // 파일 업로드 후 Shared 갱신
         } else {
           alert("파일 업로드에 실패했습니다.");
