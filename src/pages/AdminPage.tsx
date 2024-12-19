@@ -105,7 +105,7 @@ const AdminPage: React.FC = () => {
                     {file.nickname || "업로더 없음"}
                   </TableCell>
                   <TableCell sx={{ fontSize: "1rem" }}>
-                    {file.reported ? "비정상" : "-"}
+                    {file.reported ? "불법" : "-"}
                   </TableCell>
                 </TableRow>
               ))}
